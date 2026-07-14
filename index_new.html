@@ -157,8 +157,16 @@ var dreamFace = 'sad';
 function setDreamFace(face) {
   if (face === dreamFace) return;
   dreamFace = face;
-  var map = { happy: 'happy.png', angry: 'angry.png', sad: 'sad.jpg' };
-  dreamPet.src = 'dream-emoji/' + (map[face] || 'sad.jpg');
+  // Lv2+ 用 Sapnap，否则用 Dream
+  var lv = 1;
+  try { var d = JSON.parse(localStorage.getItem('***')); if (d && d.level) lv = d.level; } catch(e) {}
+  if (lv >= 2) {
+    var map = { happy: 'happy.webp', angry: 'angry.png', sad: 'sad.jpg' };
+    dreamPet.src = 'sapnap-emoji/' + (map[face] || 'sad.jpg');
+  } else {
+    var map = { happy: 'happy.png', angry: 'angry.png', sad: 'sad.jpg' };
+    dreamPet.src = 'dream-emoji/' + (map[face] || 'sad.jpg');
+  }
 }
 
 // 初始显示默认表情
