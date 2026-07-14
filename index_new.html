@@ -318,7 +318,7 @@ function onResults(results) {
 
 function handleDistraction(distracted, reason) {
   var now = Date.now();
-  var threshold = 3000; // 3秒延迟
+  var threshold = 1500; // 1.5秒延迟（从3秒改短）
 
   if (distracted) {
     if (distractStartTime === null) distractStartTime = now;
