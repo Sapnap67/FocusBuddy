@@ -17,10 +17,9 @@ h1{font-size:24px;color:var(--accent);margin-bottom:4px}
 .cam-box video,.cam-box canvas{display:block;width:100%;transform:scaleX(-1)}
 .cam-box canvas{position:absolute;top:0;left:0}
 .badge{position:absolute;top:12px;left:12px;padding:6px 14px;border-radius:20px;font-weight:600;font-size:13px;z-index:10;backdrop-filter:blur(8px)}
-.badge.focused{background:rgba(39,174,96,.3);color:var(--green)}
-.badge.distracted{background:rgba(243,156,18,.3);color:var(--yellow)}
-.badge.away{background:rgba(231,76,60,.3);color:var(--red)}
-.badge.idle{background:rgba(149,165,166,.3);color:var(--gray)}
+.badge.good{background:rgba(39,174,96,.3);color:var(--green)}
+.badge.warn{background:rgba(243,156,18,.3);color:var(--yellow)}
+.badge.bad{background:rgba(231,76,60,.3);color:var(--red)}
 .panel{display:flex;flex-direction:column;gap:12px;min-width:240px;flex:0 0 240px}
 .card{background:var(--card);border-radius:12px;padding:16px;box-shadow:0 4px 24px rgba(0,0,0,.3)}
 .card h3{font-size:13px;color:#8892b0;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px}
@@ -34,13 +33,14 @@ button{padding:10px 16px;border:none;border-radius:8px;font-weight:600;cursor:po
 .btn-start:hover{opacity:.9}
 .btn-stop{background:var(--red);color:#fff}
 button:disabled{opacity:.4;cursor:default}
-.angle-info{font-size:11px;color:#8892b0;margin-top:6px;font-family:'Courier New',monospace}
-.warn{position:fixed;top:16px;left:50%;transform:translateX(-50%);background:var(--red);color:#fff;padding:12px 24px;border-radius:8px;font-weight:600;z-index:100;display:none;animation:pulse .6s infinite alternate}
-@keyframes pulse{from{transform:translateX(-50%) scale(1)}to{transform:translateX(-50%) scale(1.03)}}
-.ready-dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:6px}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}
 .dot-green{background:var(--green);box-shadow:0 0 8px var(--green)}
+.dot-yellow{background:var(--yellow);box-shadow:0 0 8px var(--yellow)}
 .dot-red{background:var(--red);box-shadow:0 0 8px var(--red)}
 .dot-gray{background:var(--gray)}
+.debug{margin-top:6px;font-size:11px;color:#8892b0;font-family:'Courier New',monospace}
+.warn-banner{position:fixed;top:80px;left:50%;transform:translateX(-50%);background:var(--red);color:#fff;padding:12px 24px;border-radius:8px;font-weight:600;z-index:100;display:none;animation:pulse .6s infinite alternate}
+@keyframes pulse{from{transform:translateX(-50%) scale(1)}to{transform:translateX(-50%) scale(1.03)}}
 </style>
 </head>
 <body>
@@ -50,25 +50,26 @@ button:disabled{opacity:.4;cursor:default}
 
 <div class="main">
   <div class="cam-box">
-    <div class="badge idle" id="badge">等待开始</div>
+    <div class="badge good" id="badge">准备就绪</div>
     <video id="video" autoplay muted playsinline></video>
     <canvas id="overlay"></canvas>
   </div>
 
   <div class="panel">
     <div class="card">
-      <h3><span class="ready-dot dot-gray" id="faceDot"></span> 人脸状态</h3>
-      <div class="stat-row"><span>朝向角度</span><span class="v" id="faceAngle">—</span></div>
-      <div class="stat-row"><span>当前状态</span><span class="v" id="faceStatus">等待中</span></div>
-      <div class="angle-info" id="angleDetail"></div>
+      <h3><span class="dot dot-gray" id="faceDot"></span> 人脸检测</h3>
+      <div class="stat-row"><span>眼睛状态</span><span class="v" id="valEye">—</span></div>
+      <div class="stat-row"><span>头部姿态</span><span class="v" id="valHead">—</span></div>
+      <div class="stat-row"><span>东张西望</span><span class="v" id="valTurn">—</span></div>
+      <div class="debug" id="debugInfo"></div>
     </div>
 
     <div class="card">
       <h3>⏱ 专注计时</h3>
       <div class="timer-label" id="timerLabel">未开始</div>
       <div class="timer" id="timer">00:00</div>
-      <div class="stat-row"><span>走神次数</span><span class="v" id="distCount">0</span></div>
-      <div class="stat-row"><span>专注率</span><span class="v" id="focusRate">—</span></div>
+      <div class="stat-row"><span>专注度评分</span><span class="v" id="focusScore">100</span></div>
+      <div class="stat-row"><span>分心次数</span><span class="v" id="distCount">0</span></div>
     </div>
 
     <div class="controls">
@@ -78,182 +79,311 @@ button:disabled{opacity:.4;cursor:default}
   </div>
 </div>
 
-<div class="warn" id="warnBanner"></div>
+<div class="warn-banner" id="warnBanner"></div>
 
 <script>
-// ===== DOM =====
-const video=document.getElementById('video'), overlay=document.getElementById('overlay');
-const ctx=overlay.getContext('2d');
-const badge=document.getElementById('badge');
-const startBtn=document.getElementById('startBtn'), stopBtn=document.getElementById('stopBtn');
-const timerEl=document.getElementById('timer'), timerLabel=document.getElementById('timerLabel');
-const faceAngleEl=document.getElementById('faceAngle'), faceStatusEl=document.getElementById('faceStatus');
-const angleDetail=document.getElementById('angleDetail');
-const distCountEl=document.getElementById('distCount'), focusRateEl=document.getElementById('focusRate');
-const faceDot=document.getElementById('faceDot');
-const warnBanner=document.getElementById('warnBanner');
+// ==================== 检测代码（移植自旧项目 v1.7，已验证）====================
 
-// ===== 状态 =====
-var running=false, faceMesh=null, camera=null;
-var focusSec=0, distractSec=0, distractCount=0, timerInterval=null;
-var currentStatus='idle'; // idle|focused|distracted|away
-var awaySince=null, distractSince=null;
-var warnedOnce=false;
-var frameW=640, frameH=480; // 修正坐标失真用
+var video = document.getElementById('video');
+var overlay = document.getElementById('overlay');
+var ctx = overlay.getContext('2d');
+var badge = document.getElementById('badge');
+var warnBanner = document.getElementById('warnBanner');
+var startBtn = document.getElementById('startBtn');
+var stopBtn = document.getElementById('stopBtn');
+var loadingMsg = document.getElementById('timerLabel');
 
-// 阈值（移植自旧项目 v1.7）
-var YAW_LIMIT=30, PITCH_LIMIT=25, AWAY_SEC=3;
-var EAR_THRESHOLD=0.22, BLINK_MS=800, TURN_THRESHOLD=0.62;
-var eyeCloseStart=null;
+// 状态
+var valEye = document.getElementById('valEye');
+var valHead = document.getElementById('valHead');
+var valTurn = document.getElementById('valTurn');
+var faceDot = document.getElementById('faceDot');
+var debugInfo = document.getElementById('debugInfo');
+var focusScoreEl = document.getElementById('focusScore');
+var distCountEl = document.getElementById('distCount');
+var timerEl = document.getElementById('timer');
+var timerLabel = document.getElementById('timerLabel');
 
-// ===== 坐标辅助（旧项目坑2修复：必须乘实际宽高）=====
-function dist(a,b){return Math.hypot((a.x-b.x)*frameW,(a.y-b.y)*frameH)}
+var faceMesh = null;
+var camera = null;
+var running = false;
 
-// ===== EAR 闭眼检测 =====
-var LE=[33,160,158,133,153,144], RE=[362,385,387,263,373,380];
-function calcEAR(lm,idx){
-  var p=idx.map(function(i){return lm[i]});
-  return(dist(p[1],p[5])+dist(p[2],p[4]))/(2*dist(p[0],p[3])||.01);
+// 检测阈值（来自旧项目，已验证）
+var EAR_THRESHOLD = 0.22;
+var HEAD_THRESHOLD = 0.38;
+var BLINK_IGNORE_MS = 800;
+var eyeCloseStart = null;
+var TURN_THRESHOLD = 0.62;
+var MAR_THRESHOLD = 0.6;
+var YAWN_MIN_MS = 1200;
+var mouthOpenStart = null;
+var yawnCooldown = 0;
+
+// 分心状态
+var distractStartTime = null;
+var isDistracted = false;
+var distractCount = 0;
+var focusScore = 100;
+var sessionStart = null;
+
+// 画面尺寸（修正宽高比失真 — 旧项目坑2）
+var frameW = 640, frameH = 480;
+
+// 计时器
+var timerInterval = null;
+var focusSec = 0, distractSec = 0;
+
+// ══════════ 以下全部来自旧项目，一字不改 ══════════
+
+function dist(a, b) {
+  var dx = (a.x - b.x) * frameW;
+  var dy = (a.y - b.y) * frameH;
+  return Math.hypot(dx, dy);
 }
 
-// ===== FaceMesh =====
-function onFaceResults(r){
-  ctx.clearRect(0,0,overlay.width,overlay.height);
-  var lm=r.multiFaceLandmarks?.[0];
-  if(!lm){handleNoFace();return}
-  awaySince=null;faceDot.className='ready-dot dot-green';
-
-  // 1. yaw/pitch 朝向
-  var n=lm[1], le=lm[133], re=lm[362];
-  var mx=(le.x+re.x)/2, my=(le.y+re.y)/2, ed=Math.hypot(re.x-le.x,re.y-le.y)||.01;
-  var yaw=(n.x-mx)/ed*60, pitch=(n.y-my)/ed*40;
-  faceAngleEl.textContent='Y:'+yaw.toFixed(0)+'° P:'+pitch.toFixed(0)+'°';
-
-  // 2. EAR 闭眼（旧项目坑3：加眨眼过滤）
-  var ear=(calcEAR(lm,LE)+calcEAR(lm,RE))/2;
-  var closed=ear<0.22;
-  if(closed){if(!eyeCloseStart)eyeCloseStart=Date.now()}
-  else eyeCloseStart=null;
-  var eyesShut=eyeCloseStart&&(Date.now()-eyeCloseStart)>=BLINK_MS;
-  angleDetail.textContent='EAR:'+ear.toFixed(2)+' Yaw:'+yaw.toFixed(0);
-
-  // 3. 转头检测
-  var lc=lm[234], rc=lm[454];
-  var nl=dist(n,lc), nr=dist(n,rc);
-  var turnR=Math.min(nl,nr)/Math.max(nl,nr)||1;
-  var turned=turnR<TURN_THRESHOLD;
-
-  // 判断状态
-  var absY=Math.abs(yaw), absP=Math.abs(pitch);
-  if(eyesShut||turned||absY>YAW_LIMIT||absP>PITCH_LIMIT){
-    setStatus('distracted');
-  }else{setStatus('focused');distractSince=null;warnedOnce=false}
-
-  // 画关键点
-  for(var i=0;i<lm.length;i++){
-    ctx.beginPath();
-    ctx.arc((1-lm[i].x)*overlay.width, lm[i].y*overlay.height, 1.5, 0, Math.PI*2);
-    ctx.fillStyle='#00ff88';ctx.fill();
-  }
+function eyeAspectRatio(landmarks, indices) {
+  var p = indices.map(function(i) { return landmarks[i]; });
+  var v1 = dist(p[1], p[5]);
+  var v2 = dist(p[2], p[4]);
+  var h = dist(p[0], p[3]);
+  return (v1 + v2) / (2 * h);
 }
 
-function handleNoFace(){
-  faceDot.className='ready-dot dot-red';faceAngleEl.textContent='无面部';
-  if(!awaySince)awaySince=Date.now();eyeCloseStart=null;
-  if((Date.now()-awaySince)>AWAY_SEC*1000)setStatus('away');
-}
+var LEFT_EYE = [33, 160, 158, 133, 153, 144];
+var RIGHT_EYE = [362, 385, 387, 263, 373, 380];
 
-function setStatus(s){
-  if(!running)return;
-  if(currentStatus===s)return;
-  currentStatus=s;
-  faceStatusEl.textContent=s==='focused'?'专注中':s==='distracted'?'走神了':s==='away'?'离开了':'—';
-  badge.textContent=s==='focused'?'✓ 专注中':s==='distracted'?'⚠ 走神了':'✗ 离开屏幕';
-  badge.className='badge '+s;
+function onResults(results) {
+  ctx.clearRect(0, 0, overlay.width, overlay.height);
 
-  if(s==='distracted'){
-    if(!distractSince)distractSince=Date.now();
-  }
-  if(s==='away'&&!warnedOnce){
-    showWarn('检测到离开屏幕！');
-    warnedOnce=true;
-  }
-}
+  var hasFace = results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0;
+  var distracted = false;
+  var reason = '';
 
-function showWarn(msg){
-  warnBanner.textContent=msg;warnBanner.style.display='block';
-  setTimeout(function(){warnBanner.style.display='none'},3000);
-}
+  if (!hasFace) {
+    valEye.textContent = '—';
+    valHead.textContent = '—';
+    valTurn.textContent = '—';
+    faceDot.className = 'dot dot-red';
+    debugInfo.textContent = '无人脸';
+    distracted = true;
+    reason = '离开画面';
+  } else {
+    var lm = results.multiFaceLandmarks[0];
+    faceDot.className = 'dot dot-green';
 
-// ===== 计时 =====
-function updateTimer(){
-  var m=Math.floor(focusSec/60), s=focusSec%60;
-  timerEl.textContent=String(m).padStart(2,'0')+'：'+String(s).padStart(2,'0');
-  var total=focusSec+distractSec;
-  if(total>0)focusRateEl.textContent=Math.round(focusSec/total*100)+'%';
-  distCountEl.textContent=distractCount;
-}
+    // 1. 眼睛检测
+    var leftEAR = eyeAspectRatio(lm, LEFT_EYE);
+    var rightEAR = eyeAspectRatio(lm, RIGHT_EYE);
+    var ear = (leftEAR + rightEAR) / 2;
+    var eyesClosedRaw = ear < EAR_THRESHOLD;
 
-function timerTick(){
-  if(!running)return;
-  if(currentStatus==='focused')focusSec++;
-  else if(currentStatus==='distracted'){
-    distractSec++;
-    if(distractSince&&(Date.now()-distractSince)>30000){
-      distractCount++;distractSince=Date.now();showWarn('👀 走神超过30秒！');
+    if (eyesClosedRaw) {
+      if (eyeCloseStart === null) eyeCloseStart = Date.now();
+    } else {
+      eyeCloseStart = null;
+    }
+    var eyesClosed = eyeCloseStart !== null && (Date.now() - eyeCloseStart) >= BLINK_IGNORE_MS;
+
+    if (eyesClosed) {
+      valEye.textContent = '闭眼 😴 (' + ear.toFixed(2) + ')';
+      distracted = true;
+      reason = '闭眼/瞌睡';
+    } else if (eyesClosedRaw) {
+      valEye.textContent = '眨眼 😐 (' + ear.toFixed(2) + ')';
+    } else {
+      valEye.textContent = '睁开 👁 (' + ear.toFixed(2) + ')';
+    }
+
+    // 2. 低头检测
+    var noseTip = lm[1];
+    var foreHead = lm[10];
+    var chin = lm[152];
+    var faceHeight = dist(foreHead, chin);
+    var noseToChin = dist(noseTip, chin);
+    var headRatio = noseToChin / faceHeight;
+    var headDown = headRatio < HEAD_THRESHOLD;
+
+    if (headDown) {
+      valHead.textContent = '低头 📉 (' + headRatio.toFixed(2) + ')';
+      distracted = true;
+      if (!reason) reason = '低头';
+    } else {
+      valHead.textContent = '正常 (' + headRatio.toFixed(2) + ')';
+    }
+
+    // 3. 东张西望
+    var leftCheek = lm[234];
+    var rightCheek = lm[454];
+    var noseToLeft = dist(noseTip, leftCheek);
+    var noseToRight = dist(noseTip, rightCheek);
+    var turnRatio = Math.min(noseToLeft, noseToRight) / Math.max(noseToLeft, noseToRight);
+    var lookingAway = turnRatio < TURN_THRESHOLD;
+
+    if (lookingAway) {
+      valTurn.textContent = '转头 👀 (' + turnRatio.toFixed(2) + ')';
+      distracted = true;
+      if (!reason) reason = '东张西望';
+    } else {
+      valTurn.textContent = '正常 (' + turnRatio.toFixed(2) + ')';
+    }
+
+    // 4. 打哈欠
+    var mouthTop = lm[13];
+    var mouthBottom = lm[14];
+    var mouthLeft = lm[61];
+    var mouthRight = lm[291];
+    var mar = dist(mouthTop, mouthBottom) / dist(mouthLeft, mouthRight);
+    var mouthOpen = mar > MAR_THRESHOLD;
+
+    if (mouthOpen) {
+      if (mouthOpenStart === null) mouthOpenStart = Date.now();
+    } else {
+      mouthOpenStart = null;
+    }
+    var yawning = mouthOpenStart !== null && (Date.now() - mouthOpenStart) >= YAWN_MIN_MS;
+
+    if (yawning && Date.now() > yawnCooldown) {
+      yawnCooldown = Date.now() + 15000;
+      showWarn('😪 你好像累了，休息一下吧~');
+    }
+
+    // 调试信息
+    debugInfo.textContent = 'EAR:' + ear.toFixed(2) + ' Turn:' + turnRatio.toFixed(2) + ' Head:' + headRatio.toFixed(2) + ' MAR:' + mar.toFixed(2);
+
+    // 画关键点
+    for (var i = 0; i < lm.length; i++) {
+      ctx.beginPath();
+      ctx.arc((1 - lm[i].x) * overlay.width, lm[i].y * overlay.height, 1.5, 0, Math.PI * 2);
+      ctx.fillStyle = '#00ff88';
+      ctx.fill();
     }
   }
-  updateTimer();
+
+  handleDistraction(distracted, reason);
+  updateStats();
 }
 
-// ===== 控制 =====
-startBtn.onclick=async function(){
-  startBtn.disabled=true;startBtn.textContent='加载中...';
-  timerLabel.textContent='正在下载AI模型，等几秒~';
+function handleDistraction(distracted, reason) {
+  var now = Date.now();
+  var threshold = 3000; // 3秒延迟
 
-  if(typeof FaceMesh==='undefined'||typeof Camera==='undefined'){
-    alert('模型库加载失败，请检查网络后刷新页面');
-    startBtn.disabled=false;startBtn.textContent='▶ 开始';timerLabel.textContent='未开始';return;
+  if (distracted) {
+    if (distractStartTime === null) distractStartTime = now;
+    var elapsed = now - distractStartTime;
+
+    if (elapsed >= threshold && !isDistracted) {
+      isDistracted = true;
+      distractCount++;
+      showWarn('⚠ ' + reason + '！请集中注意力');
+    }
+
+    if (isDistracted) {
+      badge.textContent = '⚠ ' + reason;
+      badge.className = 'badge bad';
+    } else {
+      badge.textContent = '检测中...';
+      badge.className = 'badge warn';
+    }
+
+    focusScore = Math.max(0, focusScore - 0.15);
+  } else {
+    distractStartTime = null;
+    if (isDistracted) {
+      isDistracted = false;
+      warnBanner.style.display = 'none';
+    }
+    badge.textContent = '✓ 专注中';
+    badge.className = 'badge good';
+    focusScore = Math.min(100, focusScore + 0.05);
+  }
+}
+
+function showWarn(msg) {
+  warnBanner.textContent = msg;
+  warnBanner.style.display = 'block';
+  setTimeout(function() { warnBanner.style.display = 'none'; }, 4000);
+}
+
+function updateStats() {
+  focusScoreEl.textContent = Math.round(focusScore);
+  distCountEl.textContent = distractCount;
+  if (sessionStart) {
+    var secs = Math.floor((Date.now() - sessionStart) / 1000);
+    var m = Math.floor(secs / 60);
+    var s = secs % 60;
+    timerEl.textContent = String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+  }
+}
+
+// ══════════ 启动/停止（使用旧项目的 Camera 工具类）══════════
+
+async function start() {
+  timerLabel.textContent = '正在加载模型...';
+  startBtn.disabled = true;
+
+  if (typeof FaceMesh === 'undefined' || typeof Camera === 'undefined') {
+    alert('模型库加载失败，请检查网络后刷新');
+    startBtn.disabled = false;
+    return;
   }
 
-  faceMesh=new FaceMesh({locateFile:f=>'https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/'+f});
-  faceMesh.setOptions({maxNumFaces:1,refineLandmarks:true,minDetectionConfidence:.5,minTrackingConfidence:.5});
-  faceMesh.onResults(onFaceResults);
+  faceMesh = new FaceMesh({
+    locateFile: function(file) { return 'https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/' + file; }
+  });
+  faceMesh.setOptions({
+    maxNumFaces: 1,
+    refineLandmarks: true,
+    minDetectionConfidence: 0.5,
+    minTrackingConfidence: 0.5
+  });
+  faceMesh.onResults(onResults);
 
-  try{
-    timerLabel.textContent='正在打开摄像头...';
-    var cam=new Camera(video,{onFrame:async function(){await faceMesh.send({image:video})},width:640,height:480});
-    stream=cam; // 保存引用用于stop
-    await cam.start();
+  try {
+    camera = new Camera(video, {
+      onFrame: async function() { await faceMesh.send({ image: video }); },
+      width: 640,
+      height: 480
+    });
+    await camera.start();
 
-    setTimeout(function(){
-      overlay.width=video.videoWidth||640;overlay.height=video.videoHeight||480;
-      frameW=overlay.width;frameH=overlay.height;
-    },500);
+    setTimeout(function() {
+      overlay.width = video.videoWidth || 640;
+      overlay.height = video.videoHeight || 480;
+      frameW = overlay.width;
+      frameH = overlay.height;
+    }, 500);
 
-    running=true;currentStatus='focused';distractSec=0;distractCount=0;focusSec=0;
-    setStatus('focused');updateTimer();
-    timerLabel.textContent='专注计时中';timerInterval=setInterval(timerTick,1000);
-    startBtn.disabled=true;stopBtn.disabled=false;
-  }catch(e){alert('启动失败：'+e.message);startBtn.disabled=false;startBtn.textContent='▶ 开始';timerLabel.textContent='未开始'}
-};
-
-stopBtn.onclick=function(){
-  if(camera&&camera.stop)camera.stop();
-  running=false;clearInterval(timerInterval);
-  currentStatus='idle';badge.textContent='已停止';badge.className='badge idle';
-  timerLabel.textContent='已停止';faceStatusEl.textContent='—';
-  faceAngleEl.textContent='—';angleDetail.textContent='';
-  faceDot.className='ready-dot dot-gray';
-  startBtn.disabled=false;stopBtn.disabled=true;
-  ctx.clearRect(0,0,overlay.width,overlay.height);updateTimer();
-};
-
-function resizeCanvas(){
-  var r=video.getBoundingClientRect();
-  overlay.width=r.width;overlay.height=r.height;
+    running = true;
+    sessionStart = Date.now();
+    focusScore = 100;
+    distractCount = 0;
+    stopBtn.disabled = false;
+    timerLabel.textContent = '专注计时中';
+  } catch (err) {
+    alert('摄像头无法访问：' + err.message);
+    startBtn.disabled = false;
+  }
 }
-window.addEventListener('resize',resizeCanvas);
+
+function stop() {
+  if (camera) camera.stop();
+  running = false;
+  startBtn.disabled = false;
+  stopBtn.disabled = true;
+  badge.textContent = '已停止';
+  badge.className = 'badge good';
+  timerLabel.textContent = '未开始';
+  valEye.textContent = '—';
+  valHead.textContent = '—';
+  valTurn.textContent = '—';
+  faceDot.className = 'dot dot-gray';
+  debugInfo.textContent = '';
+  warnBanner.style.display = 'none';
+  ctx.clearRect(0, 0, overlay.width, overlay.height);
+}
+
+startBtn.onclick = start;
+stopBtn.onclick = stop;
 </script>
 </body>
 </html>
