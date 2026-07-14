@@ -823,6 +823,7 @@ function esp32SendFocusData(data) {
 const POMO_DURATION = 25 * 60; // 25 minutes in seconds
 let pomodoroRemaining = POMO_DURATION;
 let pomodoroRunning = false;
+let pomodoroPaused = false;
 let pomodoroInterval = null;
 let pomoDetectionStarted = false;
 
@@ -836,34 +837,47 @@ function updatePomodoroDisplay() {
   pomodoroTimeEl.textContent = formatPomoTime(pomodoroRemaining);
 }
 
-function pomodoroStart() {
-  if (pomodoroRunning) return;
+function pomodoroStop() {
+  pomodoroRunning = false;
+  pomodoroPaused = false;
+  if (pomodoroInterval) { clearInterval(pomodoroInterval); pomodoroInterval = null; }
+  pomodoroRemaining = POMO_DURATION;
+  updatePomodoroDisplay();
+  pomoStartBtn.textContent = '▶ 开始专注';
+  pomoStartBtn.classList.remove('active');
+  pomoPauseBtn.disabled = true;
+  pomoPhaseEl.textContent = '准备开始';
+  stop();
+}
 
-  // Start detection if not already running
+function pomodoroStart() {
+  if (pomodoroRunning) { pomodoroStop(); return; }
+  if (pomodoroPaused) { pomodoroResume(); return; }
+
+  // 开始检测
   if (!running) {
     pomoDetectionStarted = true;
     start();
   }
 
   pomodoroRunning = true;
-  pomoStartBtn.textContent = '▶ 专注中';
+  pomodoroPaused = false;
+  pomoStartBtn.textContent = '■ 停止';
   pomoStartBtn.classList.add('active');
   pomoPauseBtn.disabled = false;
   pomoPhaseEl.textContent = '🔥 专注中...';
 
-  pomodoroInterval = setInterval(() => {
+  pomodoroInterval = setInterval(function() {
     pomodoroRemaining--;
     updatePomodoroDisplay();
-
-    if (pomodoroRemaining <= 0) {
-      pomodoroComplete();
-    }
+    if (pomodoroRemaining <= 0) pomodoroComplete();
   }, 1000);
 }
 
 function pomodoroPause() {
   if (!pomodoroRunning) return;
   pomodoroRunning = false;
+  pomodoroPaused = true;
   clearInterval(pomodoroInterval);
   pomodoroInterval = null;
   pomoStartBtn.textContent = '▶ 继续';
@@ -872,9 +886,24 @@ function pomodoroPause() {
   pomoPhaseEl.textContent = '⏸ 已暂停';
 }
 
+function pomodoroResume() {
+  pomodoroPaused = false;
+  pomodoroRunning = true;
+  pomoStartBtn.textContent = '■ 停止';
+  pomoStartBtn.classList.add('active');
+  pomoPauseBtn.disabled = false;
+  pomoPhaseEl.textContent = '🔥 专注中...';
+  pomodoroInterval = setInterval(function() {
+    pomodoroRemaining--;
+    updatePomodoroDisplay();
+    if (pomodoroRemaining <= 0) pomodoroComplete();
+  }, 1000);
+}
+
 function pomodoroReset() {
   pomodoroRunning = false;
-  if (pomodoroInterval) {
+  pomodoroPaused = false;
+  if (pomodoroInterval) { clearInterval(pomodoroInterval); pomodoroInterval = null; }
     clearInterval(pomodoroInterval);
     pomodoroInterval = null;
   }
@@ -888,6 +917,7 @@ function pomodoroReset() {
 
 function pomodoroComplete() {
   pomodoroRunning = false;
+  pomodoroPaused = false;
   clearInterval(pomodoroInterval);
   pomodoroInterval = null;
   pomodoroRemaining = POMO_DURATION;
