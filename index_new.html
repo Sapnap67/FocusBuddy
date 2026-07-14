@@ -770,6 +770,7 @@ mainBtn.onclick = function() {
         var d = load();
         d.secs++;
         if (d.secs >= 60) { d.secs -= 60; d.xp += XP_PER_MIN; }
+        d.level = getLevel(d.xp);
         save(d);
         updateUI(d);
       }
