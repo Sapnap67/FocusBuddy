@@ -125,6 +125,98 @@
     return Math.round(today.focusTime / total * 100);
   }
 
+  // ─── Chart.js 图表 ───
+  var _pieChart = null;
+  var _barChart = null;
+
+  function initCharts() {
+    if (typeof Chart === 'undefined' || _pieChart) return;
+
+    var today = getToday();
+
+    // 饼图: 专注 vs 走神
+    var pieEl = document.getElementById('chart-pie');
+    if (pieEl) {
+      _pieChart = new Chart(pieEl, {
+        type: 'pie',
+        data: {
+          labels: ['专注', '走神'],
+          datasets: [{
+            data: [today.focusTime || 1, today.distractionTime || 0.1],
+            backgroundColor: ['#27ae60', '#f39c12'],
+            borderColor: '#16213e',
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { position: 'bottom', labels: { color: '#8892b0' } } }
+        }
+      });
+    }
+
+    // 柱状图: 近7天专注时长
+    var barEl = document.getElementById('chart-bar');
+    if (barEl) {
+      var history = getHistory(7);
+      _barChart = new Chart(barEl, {
+        type: 'bar',
+        data: {
+          labels: history.map(function(d) { return d.date.slice(5); }),
+          datasets: [{
+            label: '专注 (min)',
+            data: history.map(function(d) { return Math.round(d.focusTime / 60); }),
+            backgroundColor: '#ff6b35',
+            borderRadius: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: '#8892b0' } },
+            y: { beginAtZero: true, ticks: { color: '#8892b0', stepSize: 10 } }
+          }
+        }
+      });
+    }
+  }
+
+  function updateCharts() {
+    if (!_pieChart && !_barChart) return;
+
+    var today = getToday();
+
+    if (_pieChart) {
+      _pieChart.data.datasets[0].data = [today.focusTime || 1, today.distractionTime || 0.1];
+      _pieChart.update();
+    }
+
+    if (_barChart) {
+      var history = getHistory(7);
+      _barChart.data.labels = history.map(function(d) { return d.date.slice(5); });
+      _barChart.data.datasets[0].data = history.map(function(d) { return Math.round(d.focusTime / 60); });
+      _barChart.update();
+    }
+  }
+
+  // ─── 音效 ───
+  function playSound() {
+    try {
+      var ctx = new (window.AudioContext || window.webkitAudioContext)();
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = 880;
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.8);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.8);
+    } catch(e) { /* audio not available */ }
+  }
+
   window.StatsManager = {
     addFocusSession: addFocusSession,
     addDistraction: addDistraction,
@@ -132,7 +224,10 @@
     getToday: getToday,
     getHistory: getHistory,
     formatTime: formatTime,
-    getFocusRate: getFocusRate
+    getFocusRate: getFocusRate,
+    initCharts: initCharts,
+    updateCharts: updateCharts,
+    playSound: playSound
   };
 
 })();

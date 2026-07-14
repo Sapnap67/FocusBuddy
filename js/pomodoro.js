@@ -55,11 +55,20 @@
   };
 
   PomodoroTimer.prototype.skip = function() {
-    if (this.state === STATES.ON_BREAK) {
-      // 跳过休息，直接开始下一轮
-      if (this._interval) clearInterval(this._interval);
+    if (this._interval) clearInterval(this._interval);
+
+    if (this.state === STATES.FOCUSING) {
+      // 跳过剩余专注 → 直接进入休息
+      this.state = STATES.ON_BREAK;
+      this.remaining = this.breakDuration;
+      this._tick();
+      if (this.onComplete) this.onComplete('focus');
+      this._notifyState();
+    } else if (this.state === STATES.ON_BREAK) {
+      // 跳过剩余休息 → 回到空闲
       this.state = STATES.IDLE;
       this.remaining = this.focusDuration;
+      if (this.onComplete) this.onComplete('break');
       this._notifyState();
     }
   };
