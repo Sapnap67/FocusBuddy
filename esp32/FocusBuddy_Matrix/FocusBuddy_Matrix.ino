@@ -221,11 +221,16 @@ void startupAnimation() {
 }
 
 // ===== 宠物状态管理 =====
+unsigned long celebrateStart = 0;
+
 void setPetState(String state) {
   petState = state;
   currentState = state;
   alertActive = false;
   animFrame = 0;
+  if (state == "celebrate") {
+    celebrateStart = millis();
+  }
   Serial.println("Pet: " + state);
 
   if (state == "happy") {
@@ -279,9 +284,9 @@ void updateDisplay() {
       drawFace(frames[animFrame], strip.Color(255, 100, 0));
     }
     // 5秒后自动退出
-    static unsigned long celebrateStart = 0;
-    if (currentState == "celebrate" && celebrateStart == 0) celebrateStart = now;
-    // 注: 简化处理，外部调用 setPetState 会重置
+    if (now - celebrateStart > 5000) {
+      setPetState("happy");
+    }
   }
 
   // Happy 状态：偶尔眨眼
@@ -331,10 +336,10 @@ void _renderTimer() {
   drawDigit(1, 1, tens, color);   // col=1, row=1
   drawDigit(5, 1, ones, color);   // col=5, row=1
 
-  // 冒号闪烁（每秒切换）
+  // 冒号闪烁（在 col=4 的上下各一点）
   if ((millis() / 500) % 2 == 0) {
-    strip.setPixelColor(2 * 8 + 3, color);  // row=2, col=3
-    strip.setPixelColor(3 * 8 + 3, color);  // row=3, col=3  -- wait, col=3 is the 4th pixel
+    strip.setPixelColor(2 * 8 + 4, color);  // row=2, col=4
+    strip.setPixelColor(4 * 8 + 4, color);  // row=4, col=4
   }
 
   strip.show();
