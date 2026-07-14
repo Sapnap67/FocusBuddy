@@ -158,10 +158,12 @@ var dreamFace = 'sad';
 function setDreamFace(face) {
   if (face === dreamFace) return;
   dreamFace = face;
-  // Lv2+ 用 Sapnap，否则用 Dream
   var lv = 1;
   try { var d = JSON.parse(localStorage.getItem('***')); if (d && d.level) lv = d.level; } catch(e) {}
-  if (lv >= 2) {
+  if (lv >= 3) {
+    var map = { happy: 'happy.jpg', angry: 'angry.png', sad: 'sad.png' };
+    dreamPet.src = 'george-emoji/' + (map[face] || 'sad.png');
+  } else if (lv >= 2) {
     var map = { happy: 'happy.webp', angry: 'angry.png', sad: 'sad.png' };
     dreamPet.src = 'sapnap-emoji/' + (map[face] || 'sad.png');
   } else {
