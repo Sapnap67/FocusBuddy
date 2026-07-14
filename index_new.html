@@ -16,7 +16,6 @@ h1{font-size:24px;color:var(--accent);margin-bottom:4px}
 .cam-box{position:relative;background:var(--card);border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.06);flex:1;min-width:320px}
 .cam-box video,.cam-box canvas{display:block;width:100%;transform:scaleX(-1)}
 .cam-box canvas{position:absolute;top:0;left:0}
-#petCanvas{position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:80px;height:80px;image-rendering:pixelated;z-index:5}
 .badge{position:absolute;top:12px;left:12px;padding:6px 14px;border-radius:20px;font-weight:600;font-size:13px;z-index:10;background:rgba(255,255,255,0.9);backdrop-filter:blur(8px)}
 .badge.good{color:var(--good)}
 .badge.warn{color:var(--warn)}
@@ -61,12 +60,11 @@ button:disabled{opacity:.4;cursor:default}
     <div class="badge good" id="badge">准备就绪</div>
     <video id="video" autoplay muted playsinline></video>
     <canvas id="overlay"></canvas>
-    <canvas id="petCanvas" width="160" height="160"></canvas>
   </div>
 
   <div class="panel">
     <div class="card">
-      <h3>👀 检测状态</h3>
+      <h3>👁 检测状态</h3>
       <div class="stat-row"><span>眼睛状态</span><span class="v" id="valEye">—</span></div>
       <div class="stat-row"><span>头部姿态</span><span class="v" id="valHead">—</span></div>
       <div class="stat-row"><span>东张西望</span><span class="v" id="valTurn">—</span></div>
@@ -115,33 +113,6 @@ var overlay = document.getElementById('overlay');
 var ctx = overlay.getContext('2d');
 var badge = document.getElementById('badge');
 var warnBanner = document.getElementById('warnBanner');
-
-// ===== 像素电子宠物 =====
-var petCanvas = document.getElementById('petCanvas');
-var petCtx = petCanvas.getContext('2d');
-var currentPet = 'idle';
-
-// 16x16像素猫表情
-var PET = {
-  happy:['0000000000000000','0000110000011000','0001111000111100','0011111100111110','0011111100111110','0001001100000100','0000000000000000','0003300000033000','0000330000003300','0000000000000000','0000011111100000','0000100000010000','0000100220010000','0000010000100000','0000001111000000','0000000000000000'],
-  worried:['0000000000000000','0000110000011000','0001111000111100','0011111100111110','0011111100111110','0001001100000100','0000000000000000','0000000003300000','0000003300000000','0000330000000000','0000011111100000','0000100000010000','0000100220010000','0000010000100000','0000001111000000','0000000000000000'],
-  angry:['0000000000000000','0000110000011000','0001111000111100','0011111100111110','0011111100111110','0001001100000100','0000000000000000','0003300000033000','0000330000003300','0000000000000000','0000010000100000','0000100110010000','0000100220010000','0000010000100000','0000000110000000','0000000000000000'],
-  sleep:['0000000000000000','0000110000011000','0001111000111100','0011111100111110','0011111100111110','0001001100000100','0000000000000000','0000002200000000','0000022000000000','0000000000000000','0000001111000000','0000010000100000','0000100000010000','0000010000100000','0000001111000000','0000000000000000']
-};
-
-function drawPet(state) {
-  if (state === currentPet) return;
-  currentPet = state;
-  var f = PET[state] || PET.sleep;
-  var c = {'0':'transparent','1':'#ff6b35','2':'#333','3':'#fff'};
-  petCtx.clearRect(0, 0, 160, 160);
-  for (var y = 0; y < 16; y++)
-    for (var x = 0; x < 16; x++)
-      if (f[y][x] !== '0') { petCtx.fillStyle = c[f[y][x]]; petCtx.fillRect(x * 10, y * 10, 10, 10); }
-}
-
-// 然后 syncPet 在状态变化时调用
-
 var startBtn = document.getElementById('startBtn');
 var stopBtn = document.getElementById('stopBtn');
 var loadingMsg = document.getElementById('timerLabel');
@@ -244,7 +215,7 @@ function onResults(results) {
     } else if (eyesClosedRaw) {
       valEye.textContent = '眨眼 😐 (' + ear.toFixed(2) + ')';
     } else {
-      valEye.textContent = '睁开 👀 (' + ear.toFixed(2) + ')';
+      valEye.textContent = '睁开 👁 (' + ear.toFixed(2) + ')';
     }
 
     // 2. 低头检测
@@ -477,7 +448,6 @@ function syncPetState() {
   lastPetState = state;
   var petMap = {focused:'happy', distracted:'worried', away:'sleep'};
   fetch('http://10.10.10.1/pet?state=' + petMap[state], {mode:'no-cors'}).catch(function(){});
-  drawPet(petMap[state]);
 }
 
 function startPomodoro() {
