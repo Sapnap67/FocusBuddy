@@ -395,12 +395,8 @@
       </div>
     </div>
 
-    <!-- ====== Controls ====== -->
-    <div class="card controls">
-      <button class="btn-start" id="startBtn">▶ 开始检测</button>
-      <button class="btn-stop" id="stopBtn" disabled>■ 停止</button>
-      <div class="loading" id="loadingMsg"></div>
-    </div>
+    <!-- Controls removed - pomodoro buttons handle start/stop -->
+    <div class="loading" id="loadingMsg"></div>
   </div>
 </div>
 
@@ -991,11 +987,10 @@ async function start() {
     sessionStart = Date.now();
     focusScore = 100;
     distractCount = 0;
-    stopBtn.disabled = false;
-    loadingMsg.textContent = '';
-    statusBadge.textContent = '✓ 专注中';
     pomoStartBtn.disabled = false;
     pomoPauseBtn.disabled = false;
+    loadingMsg.textContent = '';
+    statusBadge.textContent = '✓ 专注中';
 
     // ESP32: detection started
     esp32SendFocusData({ type: 'detection_started', timestamp: Date.now() });
@@ -1022,9 +1017,6 @@ function stop() {
   // ESP32: detection stopped
   esp32SendFocusData({ type: 'detection_stopped', timestamp: Date.now() });
 }
-
-startBtn.onclick = start;
-stopBtn.onclick = stop;
 </script>
 
 </body>
