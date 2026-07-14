@@ -111,6 +111,7 @@ button:disabled{opacity:.4;cursor:default}
       <div class="lvl-num" id="lvlNum">Lv.1</div>
       <div class="lvl-xp-bar"><div class="lvl-xp-fill" id="lvlXpBar" style="width:0%"></div></div>
       <div class="lvl-xp-txt" id="lvlXpTxt">0 / 10 XP</div>
+      <div style="text-align:right;margin-top:4px"><a href="#" id="lvlReset" style="font-size:10px;color:var(--muted);text-decoration:none">重置</a></div>
     </div>
 
     <div class="card">
@@ -779,6 +780,19 @@ mainBtn.onclick = function() {
 
   // 初始化显示
   updateUI(load());
+
+  // 重置按钮
+  var resetBtn = document.getElementById('lvlReset');
+  if (resetBtn) {
+    resetBtn.onclick = function(e) {
+      e.preventDefault();
+      if (confirm('确定重置专注等级吗？所有经验会清零。')) {
+        var d = { xp:0, level:1, secs:0 };
+        save(d);
+        updateUI(d);
+      }
+    };
+  }
 })();
 
 </script>
