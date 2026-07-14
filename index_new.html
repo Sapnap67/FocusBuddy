@@ -16,7 +16,7 @@ h1{font-size:24px;color:var(--accent);margin-bottom:4px}
 .cam-box{position:relative;background:var(--card);border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.06);flex:1;min-width:320px}
 .cam-box video,.cam-box canvas{display:block;width:100%;transform:scaleX(-1)}
 .cam-box canvas{position:absolute;top:0;left:0}
-#petCanvas{position:absolute;bottom:12px;right:12px;width:15rem;height:15rem;image-rendering:pixelated;image-rendering:crisp-edges;z-index:5;background:rgba(0,0,0,0.15);border-radius:8px}
+#dreamPet{position:absolute;bottom:16px;right:16px;width:12rem;height:12rem;z-index:5;border-radius:12px;object-fit:contain}
 .badge{position:absolute;top:12px;left:12px;padding:6px 14px;border-radius:20px;font-weight:600;font-size:13px;z-index:10;background:rgba(255,255,255,0.9);backdrop-filter:blur(8px)}
 .badge.good{color:var(--good)}
 .badge.warn{color:var(--warn)}
@@ -61,7 +61,7 @@ button:disabled{opacity:.4;cursor:default}
     <div class="badge good" id="badge">准备就绪</div>
     <video id="video" autoplay muted playsinline></video>
     <canvas id="overlay"></canvas>
-    <canvas id="petCanvas" width="240" height="240"></canvas>
+    <img id="dreamPet" src="dream-emoji/sad.jpg" alt="Dream">
   </div>
 
   <div class="panel">
@@ -116,142 +116,19 @@ var ctx = overlay.getContext('2d');
 var badge = document.getElementById('badge');
 var warnBanner = document.getElementById('warnBanner');
 
-// ===== 像素电子宠物 =====
-var petCanvas = document.getElementById('petCanvas');
-var petCtx = petCanvas.getContext('2d');
-var currentPet = 'idle';
+// ===== Dream 表情宠物（图片版）=====
+var dreamPet = document.getElementById('dreamPet');
+var dreamFace = 'sad';
 
-// ===== 24×24 像素猫 —— 三角耳+圆脸+收下巴 =====
-// '0'=透明 '1'=主色 '2'=深色(瞳孔) '3'=白色(眼白)
-// 共同骨架: 尖耳朵在上, 脸颊最宽, 下巴收窄
-var PET = {
-  happy: [
-    '000000000000000000000000',  //  0
-    '000000000000000000000000',  //  1
-    '000000000110011000000000',  //  2  △  △ 耳朵尖
-    '000000001111111000000000',  //  3  ^^^^^  耳朵展开
-    '000000011111111100000000',  //  4  头顶
-    '000000111111111110000000',  //  5  脸开始
-    '000001111111111111000000',  //  6
-    '000011111111111111100000',  //  7  脸颊最宽 ← 16px
-    '000011133331113333111000',  //  8  眼白 3333  3333
-    '000011132231113223111000',  //  9  瞳孔 3223  3223
-    '000011133331113333111000',  // 10  眼白结束
-    '000011111111111111100000',  // 11  脸
-    '000001111111111111000000',  // 12  收窄
-    '000000111111111110000000',  // 13
-    '000000011100011100000000',  // 14  鼻子区域
-    '000000001111111000000000',  // 15  ▼ 微笑
-    '000000000111110000000000',  // 16  下巴
-    '000000000011000000000000',  // 17  下巴尖
-    '000000000000000000000000',  // 18
-    '000000000000000000000000',  // 19
-    '000000000000000000000000',  // 20
-    '000000000000000000000000',  // 21
-    '000000000000000000000000',  // 22
-    '000000000000000000000000'   // 23
-  ],
-  worried: [
-    '000000000000000000000000',
-    '000000000000000000000000',
-    '000000000110011000000000',
-    '000000001111111000000000',
-    '000000011111111100000000',
-    '000000111111111110000000',
-    '000001111111111111000000',
-    '000011111111111111100000',
-    '000011133331113333111000',  // 眼白
-    '000011132231113223111000',  // 瞳孔
-    '000011133331113333111000',
-    '000011111111111111100000',
-    '000001111111111111000000',
-    '000000111111111110000000',
-    '000000011100011100000000',  // 愁眉嘴(小)
-    '000000000011110000000000',  // 撇嘴
-    '000000000000000000000000',
-    '000000000000000000000000',
-    '000000000000000000000000',
-    '000000000000000000000000',
-    '000000000000000000000000',
-    '000000000000000000000000',
-    '000000000000000000000000',
-    '000000000000000000000000'
-  ],
-  angry: [
-    '000000000000000000000000',
-    '000000000000000000000000',
-    '000000000110011000000000',
-    '000000001111111000000000',
-    '000000011111111100000000',
-    '000000111111111110000000',
-    '000001111111111111000000',
-    '000011112222222221110000',  // 倒八眉 \\////
-    '000011133331113333111000',
-    '000011132231113223111000',
-    '000011133331113333111000',
-    '000011111111111111100000',
-    '000001111111111111000000',
-    '000000111111111110000000',
-    '000000011000001100000000',  // 咬牙嘴
-    '000000000111110000000000',
-    '000000000000000000000000',
-    '000000000000000000000000',
-    '000000000000000000000000',
-    '000000000000000000000000',
-    '000000000000000000000000',
-    '000000000000000000000000',
-    '000000000000000000000000',
-    '000000000000000000000000'
-  ],
-  sleep: [
-    '000000000000000000000000',
-    '000000000000000000000000',
-    '000000000110011000000000',
-    '000000001111111000000000',
-    '000000011111111100000000',
-    '000000111111111110000000',
-    '000001111111111111000000',
-    '000011111111111111100000',
-    '000011122221112222111000',  // — — 闭眼横线
-    '000011122221112222111000',  // — —
-    '000011133331113333111000',
-    '000011111111111111100000',
-    '000001111111111111000000',
-    '000000111111111110000000',
-    '000000011111111000000000',  // 安详嘴
-    '000000000111110000000000',
-    '000000000000000000000000',
-    '000000000000000000000000',
-    '000000000000000000000000',
-    '000000000000000000000000',
-    '000000000000000000000000',
-    '000000000000000000000000',
-    '000000000000000000000000',
-    '000000000000000000000000'
-  ]
-};
-
-function drawPet(state) {
-  if (state === currentPet) return;
-  currentPet = state;
-  var f = PET[state] || PET.sleep;
-  var colorMap = {
-    happy:  {'0':'transparent','1':'#ff6b35','2':'#333','3':'#fff'},
-    worried:{'0':'transparent','1':'#e6b800','2':'#333','3':'#fff'},
-    angry:  {'0':'transparent','1':'#e74c3c','2':'#333','3':'#fff'},
-    sleep:  {'0':'transparent','1':'#5dade2','2':'#333','3':'#fff'}
-  };
-  var c = colorMap[state] || colorMap.happy;
-  petCtx.clearRect(0, 0, 240, 240);
-  for (var y = 0; y < 24; y++)
-    for (var x = 0; x < 24; x++)
-      if (f[y][x] !== '0') { petCtx.fillStyle = c[f[y][x]]; petCtx.fillRect(x * 10, y * 10, 10, 10); }
+function setDreamFace(face) {
+  if (face === dreamFace) return;
+  dreamFace = face;
+  var map = { happy: 'happy.png', angry: 'angry.png', sad: 'sad.jpg' };
+  dreamPet.src = 'dream-emoji/' + (map[face] || 'sad.jpg');
 }
 
-// 初始显示快乐猫
-drawPet('happy');
-
-// 然后 syncPet 在状态变化时调用
+// 初始显示默认表情
+setDreamFace('sad');
 
 var startBtn = document.getElementById('startBtn');
 var stopBtn = document.getElementById('stopBtn');
@@ -586,9 +463,10 @@ function syncPetState() {
   }
   if (state === lastPetState) return;
   lastPetState = state;
-  var petMap = {focused:'happy', distracted:'worried', away:'sleep'};
+  var petMap = {focused:'happy', distracted:'angry', away:'sleep'};
   fetch('http://10.10.10.1/pet?state=' + petMap[state], {mode:'no-cors'}).catch(function(){});
-  drawPet(petMap[state]);
+  var faceMap = {focused:'happy', distracted:'angry', away:'sad'};
+  setDreamFace(faceMap[state]);
 }
 
 function startPomodoro() {
