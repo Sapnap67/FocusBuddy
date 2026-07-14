@@ -162,8 +162,8 @@ function setDreamFace(face) {
   var lv = 1;
   try { var d = JSON.parse(localStorage.getItem('***')); if (d && d.level) lv = d.level; } catch(e) {}
   if (lv >= 2) {
-    var map = { happy: 'happy.webp', angry: 'angry.png', sad: 'sad.jpg' };
-    dreamPet.src = 'sapnap-emoji/' + (map[face] || 'sad.jpg');
+    var map = { happy: 'happy.webp', angry: 'angry.png', sad: 'sad.png' };
+    dreamPet.src = 'sapnap-emoji/' + (map[face] || 'sad.png');
   } else {
     var map = { happy: 'happy.png', angry: 'angry.png', sad: 'sad.jpg' };
     dreamPet.src = 'dream-emoji/' + (map[face] || 'sad.jpg');
