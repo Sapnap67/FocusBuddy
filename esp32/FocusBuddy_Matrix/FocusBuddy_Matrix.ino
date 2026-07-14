@@ -157,6 +157,7 @@ void setup() {
   server.on("/pet", handlePet);
   server.on("/alert", handleAlert);
   server.on("/status", handleStatus);
+  server.on("/timer", handleTimer);
   server.onNotFound(handleNotFound);
 
   server.begin();
@@ -284,15 +285,91 @@ void updateDisplay() {
   }
 
   // Happy 状态：偶尔眨眼
+  // Happy 状态：偶尔眨眼
   if (currentState == "happy" && (now / 3000) % 5 == 0) {
-    // 每15秒眨一下（持续200ms）
     int blinkPhase = (now % 3000) / 200;
     if (blinkPhase == 0) {
       drawFace(FACE_BLINK, strip.Color(0, 180, 40));
       return;
     }
   }
+
+  // 定时器数字显示模式
+  if (timerMode) {
+    _renderTimer();
+  }
 }
+
+// ===== 5×3 数字字体 (0-9) =====
+// 每数字 5 行 × 3 列，每行低 3 位: bit2=左, bit1=中, bit0=右
+const uint8_t DIGITS[10][5] = {
+  {0b111, 0b101, 0b101, 0b101, 0b111},  // 0
+  {0b010, 0b110, 0b010, 0b010, 0b010},  // 1
+  {0b111, 0b001, 0b111, 0b100, 0b111},  // 2
+  {0b111, 0b001, 0b111, 0b001, 0b111},  // 3
+  {0b101, 0b101, 0b111, 0b001, 0b001},  // 4
+  {0b111, 0b100, 0b111, 0b001, 0b111},  // 5
+  {0b111, 0b100, 0b111, 0b101, 0b111},  // 6
+  {0b111, 0b001, 0b010, 0b010, 0b010},  // 7
+  {0b111, 0b101, 0b111, 0b101, 0b111},  // 8
+  {0b111, 0b101, 0b111, 0b001, 0b111},  // 9
+};
+
+// ===== 定时器状态 =====
+bool timerMode = false;
+int timerMinutes = 0;
+int timerSeconds = 0;
+unsigned long timerDisplayStart = 0;
+
+void _renderTimer() {
+  strip.clear();
+  uint32_t color = strip.Color(255, 100, 0);  // 橙色
+
+  // 左数字（分钟十位）或空格
+  int tens = timerMinutes / 10;
+  int ones = timerMinutes % 10;
+  drawDigit(1, 1, tens, color);   // col=1, row=1
+  drawDigit(5, 1, ones, color);   // col=5, row=1
+
+  // 冒号闪烁（每秒切换）
+  if ((millis() / 500) % 2 == 0) {
+    strip.setPixelColor(2 * 8 + 3, color);  // row=2, col=3
+    strip.setPixelColor(3 * 8 + 3, color);  // row=3, col=3  -- wait, col=3 is the 4th pixel
+  }
+
+  strip.show();
+}
+
+void drawDigit(int col, int row, int digit, uint32_t color) {
+  if (digit < 0 || digit > 9) return;
+  for (int r = 0; r < 5; r++) {
+    byte rowBits = DIGITS[digit][r];
+    for (int c = 0; c < 3; c++) {
+      if (rowBits & (1 << (2 - c))) {
+        int x = col + c;
+        int y = row + r;
+        if (x >= 0 && x < 8 && y >= 0 && y < 8) {
+          strip.setPixelColor(y * 8 + x, color);
+        }
+      }
+    }
+  }
+}
+
+void setTimer(int m, int s) {
+  timerMinutes = m;
+  timerSeconds = s;
+  timerMode = true;
+  timerDisplayStart = millis();
+  _renderTimer();
+  Serial.println("Timer: " + String(m) + ":" + String(s));
+}
+
+void clearTimer() {
+  timerMode = false;
+  setPetState(petState);
+}
+
 
 // ===== 路由处理 =====
 void handleRoot() {
@@ -346,11 +423,31 @@ void handleAlert() {
   server.send(200, "text/plain", "ALERT");
 }
 
+void handleTimer() {
+  String mParam = server.arg("m");
+  String sParam = server.arg("s");
+  int m = mParam.toInt();
+  int s = sParam.toInt();
+
+  if (m == 0 && s == 0) {
+    // 倒计时归零 → 庆祝
+    clearTimer();
+    setPetState("celebrate");
+    server.send(200, "text/plain", "CELEBRATE!");
+  } else {
+    m = constrain(m, 0, 99);
+    s = constrain(s, 0, 59);
+    setTimer(m, s);
+    server.send(200, "text/plain", "OK: " + String(m) + ":" + String(s));
+  }
+}
+
 void handleStatus() {
   String json = "{";
   json += "\"state\":\"" + petState + "\",";
   json += "\"alert\":" + String(alertActive ? "true" : "false") + ",";
-  json += "\"fps\":" + String(millis() % 1000); // placeholder
+  json += "\"timerMode\":" + String(timerMode ? "true" : "false") + ",";
+  json += "\"timer\":\"" + String(timerMinutes) + ":" + String(timerSeconds) + "\"";
   json += "}";
   server.send(200, "application/json", json);
 }
