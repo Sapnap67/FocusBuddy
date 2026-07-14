@@ -102,6 +102,7 @@
       if (el.focusTime) el.focusTime.textContent = window.StatsManager.formatTime(today.focusTime);
       if (el.distractions) el.distractions.textContent = today.distractions;
       if (el.focusRate) el.focusRate.textContent = window.StatsManager.getFocusRate() + '%';
+      if (window.StatsManager) window.StatsManager.updateCharts();
     },
 
     updatePomodoroDisplay: function(state, remaining) {
@@ -130,6 +131,8 @@
     notifyPomodoroComplete: function(type) {
       if (type === 'focus') {
         window.StatsManager.addPomodoro();
+        window.StatsManager.updateCharts();
+        window.StatsManager.playSound();
         window.FocusBuddyUI.updateStats();
         window.FocusBuddyUI.showCelebration();
         // ESP32 庆祝
@@ -294,9 +297,12 @@
       window.SettingsManager.onChange(_onSettingsChanged);
     }
 
-    // 初始更新统计
+    // 初始更新统计 + 图表
     window.FocusBuddyUI.updateStats();
     window.FocusBuddyUI.updatePomodoroDisplay('IDLE', pomodoroTimer.focusDuration);
+    if (typeof Chart !== 'undefined' && window.StatsManager) {
+      window.StatsManager.initCharts();
+    }
   }
 
   // ===== 启动 =====

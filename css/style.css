@@ -162,7 +162,40 @@ body {
 /* Vickie: 视频镜像 */
 .mirrored { transform:scaleX(-1); }
 
-/* Ryan: 可以在此文件末尾添加你自己的样式 */
+/* ===== Ryan's additions ===== */
+
+/* Charts */
+.charts-row {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.charts-row canvas {
+  max-width: 100%;
+  max-height: 200px;
+}
+
+/* Pomodoro skip button */
+#btn-pomodoro-skip {
+  font-size: 12px;
+  opacity: 0.7;
+}
+#btn-pomodoro-skip:hover {
+  opacity: 1;
+}
+
+/* Stats counter highlight */
+#stats-pomodoros {
+  min-width: 24px;
+}
+
+/* Vision status area */
+#vision-status {
+  font-size: 16px;
+  font-weight: 600;
+}
 
 /* Warning banner */
 .warning-banner {
