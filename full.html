@@ -433,8 +433,6 @@ const overlay = document.getElementById('overlay');
 const ctx = overlay.getContext('2d');
 const statusBadge = document.getElementById('statusBadge');
 const alertBanner = document.getElementById('alertBanner');
-const startBtn = document.getElementById('startBtn');
-const stopBtn = document.getElementById('stopBtn');
 const loadingMsg = document.getElementById('loadingMsg');
 
 // 状态显示元素
@@ -951,12 +949,12 @@ pomoResetBtn.onclick = pomodoroReset;
 
 async function start() {
   loadingMsg.textContent = '正在加载模型...';
-  startBtn.disabled = true;
+  pomoStartBtn.disabled = true;
 
   // 检查库是否加载成功
   if (typeof FaceMesh === 'undefined' || typeof Camera === 'undefined') {
     loadingMsg.textContent = '❌ 模型库加载失败，请检查网络连接后刷新';
-    startBtn.disabled = false;
+    pomoStartBtn.disabled = false;
     return;
   }
 
@@ -998,20 +996,20 @@ async function start() {
     stopBtn.disabled = false;
     loadingMsg.textContent = '';
     statusBadge.textContent = '✓ 专注中';
+    pomoStartBtn.disabled = false;
+    pomoPauseBtn.disabled = false;
 
     // ESP32: detection started
     esp32SendFocusData({ type: 'detection_started', timestamp: Date.now() });
   } catch (err) {
     loadingMsg.textContent = '❌ 无法访问摄像头：' + err.message;
-    startBtn.disabled = false;
+    pomoStartBtn.disabled = false;
   }
 }
 
 function stop() {
   if (camera) camera.stop();
   running = false;
-  startBtn.disabled = false;
-  stopBtn.disabled = true;
   hideAlert();
   statusBadge.textContent = '已停止';
   statusBadge.className = 'status-badge good';
