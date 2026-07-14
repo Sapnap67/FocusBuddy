@@ -1034,58 +1034,37 @@ mainBtn.onclick = function() {
   // ===== 画猫配件 =====
   var originalDrawPet = window.drawPet;
   window.drawPet = function(state) {
-    // 先画基础猫
-    if (originalDrawPet) originalDrawPet(state);
-
-    // 再画配件
-    var d = loadPetData();
-    var c = petCtx;
-    var color = 'var(--accent)';
-
-    // 从CSS变量取色
-    var accentColor = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#ff6b35';
-
-    // 帽子（Lv.2）
-    if (d.skins.hat) {
-      c.fillStyle = accentColor;
-      // 帽檐: row 0-1, cols 5-18
-      for (var x = 5; x <= 18; x++) c.fillRect(x * 10, 0, 10, 10);
-      for (var x = 7; x <= 16; x++) c.fillRect(x * 10, 10, 10, 10);
-    }
-
-    // 围巾（Lv.3）
-    if (d.skins.scarf) {
-      c.fillStyle = '#e74c3c';
-      for (var x = 6; x <= 17; x++) c.fillRect(x * 10, 170, 10, 10);
-      c.fillRect(8 * 10, 180, 10, 10);
-      c.fillRect(15 * 10, 180, 10, 10);
-    }
-
-    // 墨镜（Lv.4）
-    if (d.skins.glasses) {
-      c.fillStyle = '#333';
-      // 左镜框
-      for (var x = 6; x <= 11; x++) c.fillRect(x * 10, 80, 10, 10);
-      // 右镜框
-      for (var x = 12; x <= 17; x++) c.fillRect(x * 10, 80, 10, 10);
-      // 镜腿
-      c.fillRect(4 * 10, 85, 10, 10);
-      c.fillRect(19 * 10, 85, 10, 10);
-    }
-
-    // 皇冠（Lv.5）
-    if (d.skins.crown) {
-      c.fillStyle = '#f1c40f';
-      c.fillRect(8 * 10, 0, 10, 10);
-      c.fillRect(11 * 10, 0, 10, 10);
-      c.fillRect(14 * 10, 0, 10, 10);
-      for (var x = 7; x <= 15; x++) c.fillRect(x * 10, 10, 10, 10);
-    }
+    try { if (originalDrawPet) originalDrawPet(state); } catch(e) {}
+    if (!petCtx) return;
+    try {
+      var d = loadPetData();
+      var c = petCtx;
+      var accentColor = '#ff6b35';
+      try { accentColor = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#ff6b35'; } catch(e) {}
+      if (d.skins.hat) {
+        c.fillStyle = accentColor;
+        for (var x = 5; x <= 18; x++) c.fillRect(x * 10, 0, 10, 10);
+        for (var x = 7; x <= 16; x++) c.fillRect(x * 10, 10, 10, 10);
+      }
+      if (d.skins.scarf) {
+        c.fillStyle = '#e74c3c';
+        for (var x = 6; x <= 17; x++) c.fillRect(x * 10, 170, 10, 10);
+        c.fillRect(8 * 10, 180, 10, 10); c.fillRect(15 * 10, 180, 10, 10);
+      }
+      if (d.skins.glasses) {
+        c.fillStyle = '#333';
+        for (var x = 6; x <= 11; x++) c.fillRect(x * 10, 80, 10, 10);
+        for (var x = 12; x <= 17; x++) c.fillRect(x * 10, 80, 10, 10);
+        c.fillRect(4 * 10, 85, 10, 10); c.fillRect(19 * 10, 85, 10, 10);
+      }
+      if (d.skins.crown) {
+        c.fillStyle = '#f1c40f';
+        c.fillRect(8 * 10, 0, 10, 10); c.fillRect(11 * 10, 0, 10, 10); c.fillRect(14 * 10, 0, 10, 10);
+        for (var x = 7; x <= 15; x++) c.fillRect(x * 10, 10, 10, 10);
+      }
+    } catch(e) {}
   };
-
-  // ===== 初始化 =====
-  var data = loadPetData();
-  updatePetUI(data);
+  try { var data = loadPetData(); updatePetUI(data); } catch(e) {}
 })();
 
 </script>
