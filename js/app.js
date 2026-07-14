@@ -161,7 +161,7 @@
   function _bindButtons() {
     document.getElementById('btn-pomodoro-start')?.addEventListener('click', function() {
       if (!window.FocusBuddyVision?.isReady()) {
-        alert('请先等待摄像头就绪');
+        alert('摄像头和AI模型还在加载中，请等几秒再点 ~');
         return;
       }
       if (AppState.pomodoro === 'IDLE') {
@@ -282,6 +282,11 @@
         console.error('[App] 初始化失败:', err);
         window.FocusBuddyUI.updateVisionStatus('idle');
       });
+    } else {
+      // 如果没有 FocusBuddyVision，显示等待状态
+      var el = document.getElementById('vision-status');
+      if (el) el.textContent = '模型加载中...';
+    }
     }
 
     // 设置变更回调

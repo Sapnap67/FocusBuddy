@@ -94,47 +94,60 @@ const faceDot=document.getElementById('faceDot');
 const warnBanner=document.getElementById('warnBanner');
 
 // ===== 状态 =====
-var running=false, faceMesh=null, stream=null;
+var running=false, faceMesh=null, camera=null;
 var focusSec=0, distractSec=0, distractCount=0, timerInterval=null;
 var currentStatus='idle'; // idle|focused|distracted|away
 var awaySince=null, distractSince=null;
 var warnedOnce=false;
+var frameW=640, frameH=480; // 修正坐标失真用
 
-// 阈值
-var YAW_LIMIT=30, PITCH_LIMIT=25, AWAY_SEC=5;
+// 阈值（移植自旧项目 v1.7）
+var YAW_LIMIT=30, PITCH_LIMIT=25, AWAY_SEC=3;
+var EAR_THRESHOLD=0.22, BLINK_MS=800, TURN_THRESHOLD=0.62;
+var eyeCloseStart=null;
 
-// ===== FaceMesh =====
-function initFaceMesh(){
-  if(typeof FaceMesh==='undefined'){alert('FaceMesh未加载，请检查网络');return Promise.reject()}
-  faceMesh=new FaceMesh({locateFile:f=>'https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/'+f});
-  faceMesh.setOptions({maxNumFaces:1,refineLandmarks:true,minDetectionConfidence:.5,minTrackingConfidence:.5});
-  faceMesh.onResults(onFaceResults);
-  return Promise.resolve();
+// ===== 坐标辅助（旧项目坑2修复：必须乘实际宽高）=====
+function dist(a,b){return Math.hypot((a.x-b.x)*frameW,(a.y-b.y)*frameH)}
+
+// ===== EAR 闭眼检测 =====
+var LE=[33,160,158,133,153,144], RE=[362,385,387,263,373,380];
+function calcEAR(lm,idx){
+  var p=idx.map(function(i){return lm[i]});
+  return(dist(p[1],p[5])+dist(p[2],p[4]))/(2*dist(p[0],p[3])||.01);
 }
 
+// ===== FaceMesh =====
 function onFaceResults(r){
   ctx.clearRect(0,0,overlay.width,overlay.height);
   var lm=r.multiFaceLandmarks?.[0];
   if(!lm){handleNoFace();return}
-  awaySince=null;
+  awaySince=null;faceDot.className='ready-dot dot-green';
 
-  // 计算朝向
-  var nose=lm[1], leftEye=lm[133], rightEye=lm[362];
-  var eyeMidX=(leftEye.x+rightEye.x)/2, eyeMidY=(leftEye.y+rightEye.y)/2;
-  var eyeDist=Math.hypot(rightEye.x-leftEye.x, rightEye.y-leftEye.y)||.01;
-  var yaw=(nose.x-eyeMidX)/eyeDist*60;
-  var pitch=(nose.y-eyeMidY)/eyeDist*40;
-  var roll=Math.atan2(rightEye.y-leftEye.y, rightEye.x-leftEye.x)*180/Math.PI;
-
-  // 更新显示
+  // 1. yaw/pitch 朝向
+  var n=lm[1], le=lm[133], re=lm[362];
+  var mx=(le.x+re.x)/2, my=(le.y+re.y)/2, ed=Math.hypot(re.x-le.x,re.y-le.y)||.01;
+  var yaw=(n.x-mx)/ed*60, pitch=(n.y-my)/ed*40;
   faceAngleEl.textContent='Y:'+yaw.toFixed(0)+'° P:'+pitch.toFixed(0)+'°';
-  angleDetail.textContent='Roll:'+roll.toFixed(0)+'° | EyeDist:'+eyeDist.toFixed(3);
-  faceDot.className='ready-dot dot-green';
+
+  // 2. EAR 闭眼（旧项目坑3：加眨眼过滤）
+  var ear=(calcEAR(lm,LE)+calcEAR(lm,RE))/2;
+  var closed=ear<0.22;
+  if(closed){if(!eyeCloseStart)eyeCloseStart=Date.now()}
+  else eyeCloseStart=null;
+  var eyesShut=eyeCloseStart&&(Date.now()-eyeCloseStart)>=BLINK_MS;
+  angleDetail.textContent='EAR:'+ear.toFixed(2)+' Yaw:'+yaw.toFixed(0);
+
+  // 3. 转头检测
+  var lc=lm[234], rc=lm[454];
+  var nl=dist(n,lc), nr=dist(n,rc);
+  var turnR=Math.min(nl,nr)/Math.max(nl,nr)||1;
+  var turned=turnR<TURN_THRESHOLD;
 
   // 判断状态
   var absY=Math.abs(yaw), absP=Math.abs(pitch);
-  if(absY>YAW_LIMIT||absP>PITCH_LIMIT){setStatus('distracted')}
-  else{setStatus('focused');distractSince=null;warnedOnce=false}
+  if(eyesShut||turned||absY>YAW_LIMIT||absP>PITCH_LIMIT){
+    setStatus('distracted');
+  }else{setStatus('focused');distractSince=null;warnedOnce=false}
 
   // 画关键点
   for(var i=0;i<lm.length;i++){
@@ -145,9 +158,8 @@ function onFaceResults(r){
 }
 
 function handleNoFace(){
-  faceDot.className='ready-dot dot-red';
-  faceAngleEl.textContent='无面部';
-  if(awaySince===null)awaySince=Date.now();
+  faceDot.className='ready-dot dot-red';faceAngleEl.textContent='无面部';
+  if(!awaySince)awaySince=Date.now();eyeCloseStart=null;
   if((Date.now()-awaySince)>AWAY_SEC*1000)setStatus('away');
 }
 
@@ -196,31 +208,45 @@ function timerTick(){
 
 // ===== 控制 =====
 startBtn.onclick=async function(){
+  startBtn.disabled=true;startBtn.textContent='加载中...';
+  timerLabel.textContent='正在下载AI模型，等几秒~';
+
+  if(typeof FaceMesh==='undefined'||typeof Camera==='undefined'){
+    alert('模型库加载失败，请检查网络后刷新页面');
+    startBtn.disabled=false;startBtn.textContent='▶ 开始';timerLabel.textContent='未开始';return;
+  }
+
+  faceMesh=new FaceMesh({locateFile:f=>'https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/'+f});
+  faceMesh.setOptions({maxNumFaces:1,refineLandmarks:true,minDetectionConfidence:.5,minTrackingConfidence:.5});
+  faceMesh.onResults(onFaceResults);
+
   try{
-    await initFaceMesh();
-    stream=await navigator.mediaDevices.getUserMedia({video:true,audio:false});
-    video.srcObject=stream;
-    await new Promise(function(r){video.onloadedmetadata=r});
-    resizeCanvas();
+    timerLabel.textContent='正在打开摄像头...';
+    var cam=new Camera(video,{onFrame:async function(){await faceMesh.send({image:video})},width:640,height:480});
+    stream=cam; // 保存引用用于stop
+    await cam.start();
+
+    setTimeout(function(){
+      overlay.width=video.videoWidth||640;overlay.height=video.videoHeight||480;
+      frameW=overlay.width;frameH=overlay.height;
+    },500);
+
     running=true;currentStatus='focused';distractSec=0;distractCount=0;focusSec=0;
     setStatus('focused');updateTimer();
     timerLabel.textContent='专注计时中';timerInterval=setInterval(timerTick,1000);
     startBtn.disabled=true;stopBtn.disabled=false;
-    (function loop(){if(running&&video.readyState>=2)faceMesh.send({image:video}).catch(function(){});
-    if(running)requestAnimationFrame(loop)})();
-  }catch(e){alert('启动失败：'+e.message)}
+  }catch(e){alert('启动失败：'+e.message);startBtn.disabled=false;startBtn.textContent='▶ 开始';timerLabel.textContent='未开始'}
 };
 
 stopBtn.onclick=function(){
+  if(camera&&camera.stop)camera.stop();
   running=false;clearInterval(timerInterval);
   currentStatus='idle';badge.textContent='已停止';badge.className='badge idle';
   timerLabel.textContent='已停止';faceStatusEl.textContent='—';
   faceAngleEl.textContent='—';angleDetail.textContent='';
   faceDot.className='ready-dot dot-gray';
   startBtn.disabled=false;stopBtn.disabled=true;
-  if(stream){stream.getTracks().forEach(function(t){t.stop()});stream=null}
-  ctx.clearRect(0,0,overlay.width,overlay.height);
-  updateTimer();
+  ctx.clearRect(0,0,overlay.width,overlay.height);updateTimer();
 };
 
 function resizeCanvas(){
