@@ -1,0 +1,186 @@
+/* ========== FocusBuddy Base Styles ========== */
+/* Ryan: 在此文件上扩展，保持变量和基础类 */
+
+:root {
+  --bg: #1a1a2e;
+  --card-bg: #16213e;
+  --text: #e0e0e0;
+  --text-dim: #8892b0;
+  --accent: #ff6b35;
+  --accent2: #f7931a;
+  --green: #27ae60;
+  --yellow: #f39c12;
+  --red: #e74c3c;
+  --gray: #95a5a6;
+  --radius: 12px;
+  --shadow: 0 4px 24px rgba(0,0,0,0.3);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+.container { max-width:1200px; margin:0 auto; padding:16px; }
+
+/* Header */
+.header {
+  display:flex; align-items:center; gap:12px;
+  padding:12px 0 20px;
+  border-bottom:1px solid rgba(255,255,255,0.1);
+  margin-bottom:20px;
+}
+.header h1 { font-size:24px; color:var(--accent); }
+.subtitle { color:var(--text-dim); font-size:14px; }
+.btn-icon {
+  margin-left:auto;
+  background:none; border:none; color:var(--text);
+  font-size:20px; cursor:pointer;
+}
+
+/* Grid */
+.main-grid {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:16px;
+}
+.col-left, .col-right { display:flex; flex-direction:column; gap:16px; }
+
+/* Cards */
+.card {
+  background:var(--card-bg);
+  border-radius:var(--radius);
+  padding:16px;
+  box-shadow:var(--shadow);
+}
+.card-header {
+  font-weight:600; font-size:14px;
+  color:var(--text-dim);
+  margin-bottom:12px;
+  text-transform:uppercase; letter-spacing:1px;
+  display:flex; align-items:center; gap:8px;
+}
+
+/* Camera */
+.camera-wrapper {
+  position:relative;
+  border-radius:8px; overflow:hidden;
+  background:#000;
+}
+.camera-wrapper video,
+.camera-wrapper canvas {
+  width:100%; display:block;
+}
+.camera-wrapper canvas {
+  position:absolute; top:0; left:0;
+}
+#camera-select {
+  margin-left:auto;
+  background:var(--bg); color:var(--text);
+  border:1px solid rgba(255,255,255,0.2); border-radius:4px;
+  padding:4px 8px; font-size:12px;
+}
+
+/* Status */
+.status-row {
+  display:flex; align-items:center; gap:10px;
+  font-size:18px; font-weight:600;
+}
+.status-dot {
+  width:16px; height:16px; border-radius:50%; display:inline-block;
+}
+.bg-focused { background:var(--green); }
+.bg-distracted { background:var(--yellow); }
+.bg-away { background:var(--red); }
+.bg-idle { background:var(--gray); }
+.debug-info { font-size:11px; color:var(--text-dim); margin-top:8px; }
+
+/* Pomodoro */
+.pomodoro-label { font-size:14px; color:var(--text-dim); }
+.pomodoro-timer { font-size:56px; font-weight:700; text-align:center; margin:12px 0; }
+.pomodoro-controls { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
+
+/* Buttons */
+.btn {
+  padding:8px 16px; border:none; border-radius:6px;
+  cursor:pointer; font-size:14px; font-weight:600;
+  background:rgba(255,255,255,0.1); color:var(--text);
+  transition:background .2s;
+}
+.btn:hover { background:rgba(255,255,255,0.2); }
+.btn:disabled { opacity:0.4; cursor:default; }
+.btn-primary { background:var(--accent); color:#fff; }
+.btn-primary:hover { background:var(--accent2); }
+
+/* Stats */
+.stats-grid {
+  display:grid; grid-template-columns:1fr 1fr 1fr 1fr;
+  gap:8px; margin-bottom:16px;
+}
+.stat-item { text-align:center; }
+.stat-value { font-size:24px; font-weight:700; color:var(--accent); }
+.stat-label { font-size:11px; color:var(--text-dim); margin-top:2px; }
+.charts-row { display:flex; gap:16px; justify-content:center; }
+
+/* Pet */
+#pet-area { text-align:center; }
+#pet-animation {
+  width:128px; height:128px;
+  image-rendering:pixelated;
+}
+#pet-status { color:var(--text-dim); margin-top:8px; }
+
+/* Modal */
+.modal {
+  position:fixed; top:0; left:0;
+  width:100%; height:100%;
+  background:rgba(0,0,0,0.6);
+  display:flex; align-items:center; justify-content:center;
+  z-index:100;
+}
+.modal-content { min-width:360px; max-width:480px; }
+.modal-header {
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:16px;
+}
+.modal-body label {
+  display:block; margin-bottom:12px;
+  font-size:14px; color:var(--text-dim);
+}
+.modal-body input[type="range"] { width:100%; margin-top:4px; }
+.modal-body select { width:100%; margin-top:4px; padding:4px; }
+.range-value { float:right; color:var(--accent); }
+
+/* Utilities */
+.hidden { display:none !important; }
+.pixel-font { font-family:'Courier New', monospace; }
+
+/* Vickie: 视频镜像 */
+.mirrored { transform:scaleX(-1); }
+
+/* Ryan: 可以在此文件末尾添加你自己的样式 */
+
+/* Warning banner */
+.warning-banner {
+  position:fixed; top:0; left:0; right:0;
+  background:var(--red); color:#fff;
+  text-align:center; padding:10px;
+  font-weight:600; z-index:200;
+  animation:slideDown .3s ease;
+}
+@keyframes slideDown { from{transform:translateY(-100%)} to{transform:translateY(0)} }
+
+/* Celebration overlay */
+.celebration {
+  position:fixed; top:0; left:0; width:100%; height:100%;
+  display:flex; align-items:center; justify-content:center;
+  z-index:300; pointer-events:none;
+  font-size:48px; animation:pop .6s ease;
+}
+@keyframes pop {
+  0%{transform:scale(0)} 50%{transform:scale(1.2)} 100%{transform:scale(1);opacity:0}
+}

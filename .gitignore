@@ -1,0 +1,33 @@
+# API Keys & Config
+config.js
+*.env
+apikeys.txt
+
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+
+# OS junk
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Build
+*.exe
+*.dll
+*.bin
+*.o
+
+# Logs
+*.log
+
+# Internal sync (not for public)
+同步/
+给Ryan的提示词.md

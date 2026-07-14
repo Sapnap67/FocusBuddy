@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FocusBuddy 学习专注伴侣</title>
+<!-- MediaPipe CDN (不放 defer，保序) -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="container">
+  <!-- ========== 头部 ========== -->
+  <header class="header">
+    <h1>🐱 FocusBuddy</h1>
+    <span class="subtitle">学习专注伴侣</span>
+    <button id="btn-settings-open" class="btn-icon" title="设置">⚙️</button>
+  </header>
+
+  <div class="main-grid">
+    <!-- ========== 左栏：摄像头 + 宠物 ========== -->
+    <div class="col-left">
+      <!-- 摄像头卡片 -->
+      <div class="card camera-card">
+        <div class="card-header">
+          <span>📷 摄像头</span>
+          <select id="camera-select"></select>
+        </div>
+        <div class="camera-wrapper">
+          <video id="video" autoplay muted playsinline></video>
+          <canvas id="overlay"></canvas>
+        </div>
+      </div>
+
+      <!-- 宠物卡片 -->
+      <div class="card pet-card">
+        <div class="card-header">🐱 专注宠物</div>
+        <div id="pet-area">
+          <canvas id="pet-animation" width="256" height="256"></canvas>
+          <div id="pet-status" class="pixel-font">等待开始...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== 右栏：番茄钟 + 状态 ========== -->
+    <div class="col-right">
+      <!-- 状态指示器 -->
+      <div class="card status-card">
+        <div class="card-header">📡 状态</div>
+        <div class="status-row">
+          <span id="vision-status-dot" class="status-dot bg-idle"></span>
+          <span id="vision-status">未开始</span>
+        </div>
+        <div id="face-angle-display" class="debug-info hidden"></div>
+      </div>
+
+      <!-- 番茄钟 -->
+      <div class="card pomodoro-card">
+        <div class="card-header">🍅 番茄钟</div>
+        <div id="pomodoro-label" class="pomodoro-label">准备开始</div>
+        <div id="pomodoro-timer" class="pomodoro-timer pixel-font">25:00</div>
+        <div class="pomodoro-controls">
+          <button id="btn-pomodoro-start" class="btn btn-primary">▶ 开始</button>
+          <button id="btn-pomodoro-pause" class="btn" disabled>⏸ 暂停</button>
+          <button id="btn-pomodoro-reset" class="btn">↺ 重置</button>
+          <button id="btn-pomodoro-skip" class="btn">⏭ 跳过</button>
+        </div>
+      </div>
+
+      <!-- 今日统计 -->
+      <div class="card stats-card">
+        <div class="card-header">📊 今日统计</div>
+        <div class="stats-grid">
+          <div class="stat-item">
+            <div class="stat-value" id="stats-pomodoros">0</div>
+            <div class="stat-label">完成番茄</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value" id="stats-focus-time">0m</div>
+            <div class="stat-label">专注时长</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value" id="stats-distractions">0</div>
+            <div class="stat-label">走神次数</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value" id="stats-focus-rate">0%</div>
+            <div class="stat-label">专注率</div>
+          </div>
+        </div>
+        <div class="charts-row">
+          <canvas id="chart-pie" width="200" height="200"></canvas>
+          <canvas id="chart-bar" width="300" height="200"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 设置面板（模态） ========== -->
+<div id="settings-panel" class="modal hidden">
+  <div class="modal-content card">
+    <div class="modal-header">
+      <h2>⚙️ 设置</h2>
+      <button id="btn-settings-close" class="btn-icon">✕</button>
+    </div>
+    <div class="modal-body">
+      <label>专注时长 (分钟)
+        <input type="range" id="setting-focus-duration" min="15" max="60" value="25" step="5">
+        <span class="range-value">25</span>
+      </label>
+      <label>休息时长 (分钟)
+        <input type="range" id="setting-break-duration" min="3" max="15" value="5" step="1">
+        <span class="range-value">5</span>
+      </label>
+      <label>走神敏感度
+        <select id="setting-sensitivity">
+          <option value="low">低 (较宽松)</option>
+          <option value="medium" selected>中 (推荐)</option>
+          <option value="high">高 (严格)</option>
+        </select>
+      </label>
+      <label>
+        <input type="checkbox" id="setting-notifications" checked> 桌面通知
+      </label>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 模块加载（Vickie + Ryan 各自独立 JS） ========== -->
+<script src="js/facemesh.js"></script>
+<script src="js/esp32.js"></script>
+<script src="js/pomodoro.js"></script>
+<script src="js/stats.js"></script>
+<script src="js/settings.js"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>

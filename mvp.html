@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FocusBuddy MVP</title>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#1a1a2e;--card:#16213e;--accent:#ff6b35;--green:#27ae60;--yellow:#f39c12;--red:#e74c3c;--gray:#95a5a6}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:#e0e0e0;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:20px}
+h1{font-size:24px;color:var(--accent);margin-bottom:4px}
+.sub{color:#8892b0;font-size:13px;margin-bottom:16px}
+.main{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;max-width:900px;width:100%}
+.cam-box{position:relative;background:var(--card);border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.3);flex:1;min-width:320px}
+.cam-box video,.cam-box canvas{display:block;width:100%;transform:scaleX(-1)}
+.cam-box canvas{position:absolute;top:0;left:0}
+.badge{position:absolute;top:12px;left:12px;padding:6px 14px;border-radius:20px;font-weight:600;font-size:13px;z-index:10;backdrop-filter:blur(8px)}
+.badge.focused{background:rgba(39,174,96,.3);color:var(--green)}
+.badge.distracted{background:rgba(243,156,18,.3);color:var(--yellow)}
+.badge.away{background:rgba(231,76,60,.3);color:var(--red)}
+.badge.idle{background:rgba(149,165,166,.3);color:var(--gray)}
+.panel{display:flex;flex-direction:column;gap:12px;min-width:240px;flex:0 0 240px}
+.card{background:var(--card);border-radius:12px;padding:16px;box-shadow:0 4px 24px rgba(0,0,0,.3)}
+.card h3{font-size:13px;color:#8892b0;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px}
+.timer{font-size:48px;font-weight:700;text-align:center;color:var(--accent);font-family:'Courier New',monospace}
+.timer-label{text-align:center;font-size:13px;color:#8892b0;margin-bottom:8px}
+.stat-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:13px}
+.stat-row .v{font-weight:600;color:var(--accent)}
+.controls{display:flex;gap:8px}
+button{padding:10px 16px;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:13px;flex:1;transition:all .2s}
+.btn-start{background:var(--accent);color:#fff}
+.btn-start:hover{opacity:.9}
+.btn-stop{background:var(--red);color:#fff}
+button:disabled{opacity:.4;cursor:default}
+.angle-info{font-size:11px;color:#8892b0;margin-top:6px;font-family:'Courier New',monospace}
+.warn{position:fixed;top:16px;left:50%;transform:translateX(-50%);background:var(--red);color:#fff;padding:12px 24px;border-radius:8px;font-weight:600;z-index:100;display:none;animation:pulse .6s infinite alternate}
+@keyframes pulse{from{transform:translateX(-50%) scale(1)}to{transform:translateX(-50%) scale(1.03)}}
+.ready-dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:6px}
+.dot-green{background:var(--green);box-shadow:0 0 8px var(--green)}
+.dot-red{background:var(--red);box-shadow:0 0 8px var(--red)}
+.dot-gray{background:var(--gray)}
+</style>
+</head>
+<body>
+
+<h1>🐱 FocusBuddy MVP</h1>
+<div class="sub">学习专注伴侣 · 最小可行版本</div>
+
+<div class="main">
+  <div class="cam-box">
+    <div class="badge idle" id="badge">等待开始</div>
+    <video id="video" autoplay muted playsinline></video>
+    <canvas id="overlay"></canvas>
+  </div>
+
+  <div class="panel">
+    <div class="card">
+      <h3><span class="ready-dot dot-gray" id="faceDot"></span> 人脸状态</h3>
+      <div class="stat-row"><span>朝向角度</span><span class="v" id="faceAngle">—</span></div>
+      <div class="stat-row"><span>当前状态</span><span class="v" id="faceStatus">等待中</span></div>
+      <div class="angle-info" id="angleDetail"></div>
+    </div>
+
+    <div class="card">
+      <h3>⏱ 专注计时</h3>
+      <div class="timer-label" id="timerLabel">未开始</div>
+      <div class="timer" id="timer">00:00</div>
+      <div class="stat-row"><span>走神次数</span><span class="v" id="distCount">0</span></div>
+      <div class="stat-row"><span>专注率</span><span class="v" id="focusRate">—</span></div>
+    </div>
+
+    <div class="controls">
+      <button class="btn-start" id="startBtn">▶ 开始</button>
+      <button class="btn-stop" id="stopBtn" disabled>■ 停止</button>
+    </div>
+  </div>
+</div>
+
+<div class="warn" id="warnBanner"></div>
+
+<script>
+// ===== DOM =====
+const video=document.getElementById('video'), overlay=document.getElementById('overlay');
+const ctx=overlay.getContext('2d');
+const badge=document.getElementById('badge');
+const startBtn=document.getElementById('startBtn'), stopBtn=document.getElementById('stopBtn');
+const timerEl=document.getElementById('timer'), timerLabel=document.getElementById('timerLabel');
+const faceAngleEl=document.getElementById('faceAngle'), faceStatusEl=document.getElementById('faceStatus');
+const angleDetail=document.getElementById('angleDetail');
+const distCountEl=document.getElementById('distCount'), focusRateEl=document.getElementById('focusRate');
+const faceDot=document.getElementById('faceDot');
+const warnBanner=document.getElementById('warnBanner');
+
+// ===== 状态 =====
+var running=false, faceMesh=null, stream=null;
+var focusSec=0, distractSec=0, distractCount=0, timerInterval=null;
+var currentStatus='idle'; // idle|focused|distracted|away
+var awaySince=null, distractSince=null;
+var warnedOnce=false;
+
+// 阈值
+var YAW_LIMIT=30, PITCH_LIMIT=25, AWAY_SEC=5;
+
+// ===== FaceMesh =====
+function initFaceMesh(){
+  if(typeof FaceMesh==='undefined'){alert('FaceMesh未加载，请检查网络');return Promise.reject()}
+  faceMesh=new FaceMesh({locateFile:f=>'https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/'+f});
+  faceMesh.setOptions({maxNumFaces:1,refineLandmarks:true,minDetectionConfidence:.5,minTrackingConfidence:.5});
+  faceMesh.onResults(onFaceResults);
+  return Promise.resolve();
+}
+
+function onFaceResults(r){
+  ctx.clearRect(0,0,overlay.width,overlay.height);
+  var lm=r.multiFaceLandmarks?.[0];
+  if(!lm){handleNoFace();return}
+  awaySince=null;
+
+  // 计算朝向
+  var nose=lm[1], leftEye=lm[133], rightEye=lm[362];
+  var eyeMidX=(leftEye.x+rightEye.x)/2, eyeMidY=(leftEye.y+rightEye.y)/2;
+  var eyeDist=Math.hypot(rightEye.x-leftEye.x, rightEye.y-leftEye.y)||.01;
+  var yaw=(nose.x-eyeMidX)/eyeDist*60;
+  var pitch=(nose.y-eyeMidY)/eyeDist*40;
+  var roll=Math.atan2(rightEye.y-leftEye.y, rightEye.x-leftEye.x)*180/Math.PI;
+
+  // 更新显示
+  faceAngleEl.textContent='Y:'+yaw.toFixed(0)+'° P:'+pitch.toFixed(0)+'°';
+  angleDetail.textContent='Roll:'+roll.toFixed(0)+'° | EyeDist:'+eyeDist.toFixed(3);
+  faceDot.className='ready-dot dot-green';
+
+  // 判断状态
+  var absY=Math.abs(yaw), absP=Math.abs(pitch);
+  if(absY>YAW_LIMIT||absP>PITCH_LIMIT){setStatus('distracted')}
+  else{setStatus('focused');distractSince=null;warnedOnce=false}
+
+  // 画关键点
+  for(var i=0;i<lm.length;i++){
+    ctx.beginPath();
+    ctx.arc((1-lm[i].x)*overlay.width, lm[i].y*overlay.height, 1.5, 0, Math.PI*2);
+    ctx.fillStyle='#00ff88';ctx.fill();
+  }
+}
+
+function handleNoFace(){
+  faceDot.className='ready-dot dot-red';
+  faceAngleEl.textContent='无面部';
+  if(awaySince===null)awaySince=Date.now();
+  if((Date.now()-awaySince)>AWAY_SEC*1000)setStatus('away');
+}
+
+function setStatus(s){
+  if(!running)return;
+  if(currentStatus===s)return;
+  currentStatus=s;
+  faceStatusEl.textContent=s==='focused'?'专注中':s==='distracted'?'走神了':s==='away'?'离开了':'—';
+  badge.textContent=s==='focused'?'✓ 专注中':s==='distracted'?'⚠ 走神了':'✗ 离开屏幕';
+  badge.className='badge '+s;
+
+  if(s==='distracted'){
+    if(!distractSince)distractSince=Date.now();
+  }
+  if(s==='away'&&!warnedOnce){
+    showWarn('检测到离开屏幕！');
+    warnedOnce=true;
+  }
+}
+
+function showWarn(msg){
+  warnBanner.textContent=msg;warnBanner.style.display='block';
+  setTimeout(function(){warnBanner.style.display='none'},3000);
+}
+
+// ===== 计时 =====
+function updateTimer(){
+  var m=Math.floor(focusSec/60), s=focusSec%60;
+  timerEl.textContent=String(m).padStart(2,'0')+'：'+String(s).padStart(2,'0');
+  var total=focusSec+distractSec;
+  if(total>0)focusRateEl.textContent=Math.round(focusSec/total*100)+'%';
+  distCountEl.textContent=distractCount;
+}
+
+function timerTick(){
+  if(!running)return;
+  if(currentStatus==='focused')focusSec++;
+  else if(currentStatus==='distracted'){
+    distractSec++;
+    if(distractSince&&(Date.now()-distractSince)>30000){
+      distractCount++;distractSince=Date.now();showWarn('👀 走神超过30秒！');
+    }
+  }
+  updateTimer();
+}
+
+// ===== 控制 =====
+startBtn.onclick=async function(){
+  try{
+    await initFaceMesh();
+    stream=await navigator.mediaDevices.getUserMedia({video:true,audio:false});
+    video.srcObject=stream;
+    await new Promise(function(r){video.onloadedmetadata=r});
+    resizeCanvas();
+    running=true;currentStatus='focused';distractSec=0;distractCount=0;focusSec=0;
+    setStatus('focused');updateTimer();
+    timerLabel.textContent='专注计时中';timerInterval=setInterval(timerTick,1000);
+    startBtn.disabled=true;stopBtn.disabled=false;
+    (function loop(){if(running&&video.readyState>=2)faceMesh.send({image:video}).catch(function(){});
+    if(running)requestAnimationFrame(loop)})();
+  }catch(e){alert('启动失败：'+e.message)}
+};
+
+stopBtn.onclick=function(){
+  running=false;clearInterval(timerInterval);
+  currentStatus='idle';badge.textContent='已停止';badge.className='badge idle';
+  timerLabel.textContent='已停止';faceStatusEl.textContent='—';
+  faceAngleEl.textContent='—';angleDetail.textContent='';
+  faceDot.className='ready-dot dot-gray';
+  startBtn.disabled=false;stopBtn.disabled=true;
+  if(stream){stream.getTracks().forEach(function(t){t.stop()});stream=null}
+  ctx.clearRect(0,0,overlay.width,overlay.height);
+  updateTimer();
+};
+
+function resizeCanvas(){
+  var r=video.getBoundingClientRect();
+  overlay.width=r.width;overlay.height=r.height;
+}
+window.addEventListener('resize',resizeCanvas);
+</script>
+</body>
+</html>
