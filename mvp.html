@@ -250,13 +250,7 @@ function onResults(results) {
     // 调试信息
     debugInfo.textContent = 'EAR:' + ear.toFixed(2) + ' Turn:' + turnRatio.toFixed(2) + ' Head:' + headRatio.toFixed(2) + ' MAR:' + mar.toFixed(2);
 
-    // 画关键点
-    for (var i = 0; i < lm.length; i++) {
-      ctx.beginPath();
-      ctx.arc((1 - lm[i].x) * overlay.width, lm[i].y * overlay.height, 1.5, 0, Math.PI * 2);
-      ctx.fillStyle = '#00ff88';
-      ctx.fill();
-    }
+    // 关键点绘制已关闭（保持检测但不显示）
   }
 
   handleDistraction(distracted, reason);
