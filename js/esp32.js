@@ -66,13 +66,20 @@
     return setPet(espState);
   }
 
+  function sendTimer(minutes, seconds) {
+    var m = Math.min(99, Math.max(0, Math.floor(minutes)));
+    var s = Math.min(59, Math.max(0, Math.floor(seconds)));
+    return _fetch('/timer?m=' + m + '&s=' + s);
+  }
+
   window.ESP32 = {
     setUrl: setUrl,
     setPet: setPet,
     alertBlink: alertBlink,
     getStatus: getStatus,
     isConnected: isConnected,
-    syncPet: syncPet
+    syncPet: syncPet,
+    sendTimer: sendTimer
   };
 
 })();

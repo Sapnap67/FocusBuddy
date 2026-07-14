@@ -8,22 +8,21 @@
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   :root {
-    --bg: #faf8f3;
-    --card: #ffffff;
+    --bg: #1a1a2e;
+    --card: #16213e;
     --accent: #ff6b35;
-    --accent2: #f0a500;
-    --text: #2d2d2d;
-    --muted: #999999;
-    --good: #27ae60;
-    --warn: #e67e22;
+    --accent2: #e85d04;
+    --text: #e8eef7;
+    --muted: #8b9dc3;
+    --good: #2ecc71;
+    --warn: #f1c40f;
     --bad: #e74c3c;
-    --pomodoro-bg: #fff5ee;
-    --border: #eee;
+    --pomodoro-bg: #f25c1a;
   }
 
   body {
     font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
-    background: linear-gradient(135deg, #faf8f3 0%, #fff5ee 50%, #fdf2e9 100%);
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
     color: var(--text);
     min-height: 100vh;
     display: flex;
@@ -35,7 +34,9 @@
   header { text-align: center; margin-bottom: 20px; }
   h1 {
     font-size: 32px;
-    color: var(--accent);
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
     margin-bottom: 6px;
     letter-spacing: 1px;
   }
@@ -55,7 +56,7 @@
     background: var(--card);
     border-radius: 16px;
     overflow: hidden;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
     flex: 1;
     min-width: 320px;
   }
@@ -77,10 +78,9 @@
     font-weight: 600;
     font-size: 14px;
     backdrop-filter: blur(8px);
-    background: rgba(255,255,255,0.9);
+    background: rgba(0,0,0,0.5);
     z-index: 10;
     transition: all 0.3s;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
   }
   .status-badge.good { color: var(--good); }
   .status-badge.warn { color: var(--warn); }
@@ -98,14 +98,14 @@
     background: var(--card);
     border-radius: 16px;
     padding: 18px 20px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
   }
   .card h3 { font-size: 14px; margin-bottom: 12px; color: var(--accent); letter-spacing: 0.5px; }
 
   /* ====== Pomodoro Card ====== */
   .pomodoro-card {
-    background: linear-gradient(135deg, var(--card), #fff8f0);
-    border: 1px solid rgba(255,107,53,0.15);
+    background: linear-gradient(135deg, var(--card), #1e2a4a);
+    border: 1px solid rgba(255,107,53,0.2);
   }
   .pomodoro-card h3 { color: var(--accent); }
   .pomodoro-timer {
@@ -148,13 +148,13 @@
   .btn-pomo-start:hover { opacity: 0.9; transform: translateY(-1px); }
   .btn-pomo-start.active { background: linear-gradient(90deg, #e85d04, #d45500); }
   .btn-pomo-pause {
-    background: #f5f5f5;
+    background: rgba(255,255,255,0.1);
     color: var(--text);
     flex: 1;
   }
-  .btn-pomo-pause:hover { background: #ebebeb; }
+  .btn-pomo-pause:hover { background: rgba(255,255,255,0.18); }
   .btn-pomo-reset {
-    background: #fafafa;
+    background: rgba(255,255,255,0.06);
     color: var(--muted);
     padding: 10px 14px !important;
   }
@@ -170,7 +170,7 @@
     text-align: center;
     flex: 1;
     padding: 6px 0;
-    background: rgba(0,0,0,0.03);
+    background: rgba(255,255,255,0.03);
     border-radius: 10px;
   }
   .stat-item .num {
@@ -190,7 +190,7 @@
     justify-content: space-between;
     align-items: center;
     padding: 7px 0;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
   }
   .metric:last-child { border-bottom: none; }
   .metric-label { font-size: 13px; color: var(--muted); }
@@ -248,7 +248,7 @@
     border-radius: 12px;
     font-size: 17px;
     font-weight: 700;
-    box-shadow: 0 4px 20px rgba(231,76,60,0.3);
+    box-shadow: 0 8px 32px rgba(231,76,60,0.5);
     z-index: 100;
     display: none;
     animation: pulse 0.6s infinite alternate;
@@ -260,7 +260,7 @@
     background: var(--card);
     border-radius: 16px;
     padding: 16px 18px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
     max-width: 1000px;
     width: 100%;
     margin-top: 16px;
@@ -275,11 +275,11 @@
   .btn-log {
     padding: 5px 12px;
     font-size: 12px;
-    background: #f5f5f5;
+    background: rgba(255,255,255,0.08);
     color: var(--text);
     border-radius: 8px;
   }
-  .btn-log:hover { background: #ebebeb; }
+  .btn-log:hover { background: rgba(255,255,255,0.15); }
   .log-list {
     max-height: 180px;
     overflow-y: auto;
@@ -799,9 +799,20 @@ function esp32SendFocusData(data) {
   if (data.type === 'heartbeat' && Date.now() - esp32LastHeartbeat < 2000) return;
   if (data.type === 'heartbeat') esp32LastHeartbeat = Date.now();
 
+  console.log('[ESP32] Focus data:', JSON.stringify(data));
+
   var statusMap = { focused:'happy', distracted:'worried', away:'sleep', eye_closed:'sleep' };
   var petState = statusMap[data.status] || 'happy';
   fetch('http://10.10.10.1/pet?state=' + petState, { mode:'no-cors' }).catch(function(){});
+
+  // 心跳包附带专注分数转倒计时显示
+  if (data.focusScore !== undefined) {
+    var score = data.focusScore;
+    var minutes = Math.floor(score / 4);
+    var secs = (score % 4) * 15;
+    fetch('http://10.10.10.1/timer?m=' + minutes + '&s=' + secs, { mode:'no-cors' })
+      .catch(function(){});
+  }
 }
 
 // ============================================================
@@ -811,7 +822,6 @@ function esp32SendFocusData(data) {
 const POMO_DURATION = 25 * 60; // 25 minutes in seconds
 let pomodoroRemaining = POMO_DURATION;
 let pomodoroRunning = false;
-let pomodoroPaused = false;
 let pomodoroInterval = null;
 let pomoDetectionStarted = false;
 
@@ -825,37 +835,22 @@ function updatePomodoroDisplay() {
   pomodoroTimeEl.textContent = formatPomoTime(pomodoroRemaining);
 }
 
-function pomodoroStop() {
-  pomodoroRunning = false;
-  pomodoroPaused = false;
-  if (pomodoroInterval) { clearInterval(pomodoroInterval); pomodoroInterval = null; }
-  pomodoroRemaining = POMO_DURATION;
-  updatePomodoroDisplay();
-  pomoStartBtn.textContent = '▶ 开始专注';
-  pomoStartBtn.classList.remove('active');
-  pomoPauseBtn.disabled = true;
-  pomoPhaseEl.textContent = '准备开始';
-  stop();
-}
-
 function pomodoroStart() {
-  if (pomodoroRunning) { pomodoroStop(); return; }
-  if (pomodoroPaused) { pomodoroResume(); return; }
+  if (pomodoroRunning) return;
 
-  // 开始检测
+  // Start detection if not already running
   if (!running) {
     pomoDetectionStarted = true;
     start();
   }
 
   pomodoroRunning = true;
-  pomodoroPaused = false;
-  pomoStartBtn.textContent = '■ 停止';
+  pomoStartBtn.textContent = '▶ 专注中';
   pomoStartBtn.classList.add('active');
   pomoPauseBtn.disabled = false;
   pomoPhaseEl.textContent = '🔥 专注中...';
 
-  pomodoroInterval = setInterval(function() {
+  pomodoroInterval = setInterval(() => {
     pomodoroRemaining--;
     updatePomodoroDisplay();
     var m = Math.floor(pomodoroRemaining / 60), s = pomodoroRemaining % 60;
@@ -867,7 +862,6 @@ function pomodoroStart() {
 function pomodoroPause() {
   if (!pomodoroRunning) return;
   pomodoroRunning = false;
-  pomodoroPaused = true;
   clearInterval(pomodoroInterval);
   pomodoroInterval = null;
   pomoStartBtn.textContent = '▶ 继续';
@@ -892,10 +886,10 @@ function pomodoroResume() {
   }, 1000);
 }
 
+
 function pomodoroReset() {
   pomodoroRunning = false;
-  pomodoroPaused = false;
-  if (pomodoroInterval) { clearInterval(pomodoroInterval); pomodoroInterval = null; }
+  if (pomodoroInterval) {
     clearInterval(pomodoroInterval);
     pomodoroInterval = null;
   }
@@ -909,7 +903,6 @@ function pomodoroReset() {
 
 function pomodoroComplete() {
   pomodoroRunning = false;
-  pomodoroPaused = false;
   clearInterval(pomodoroInterval);
   pomodoroInterval = null;
   pomodoroRemaining = POMO_DURATION;
