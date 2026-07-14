@@ -16,6 +16,7 @@ h1{font-size:24px;color:var(--accent);margin-bottom:4px}
 .cam-box{position:relative;background:var(--card);border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.06);flex:1;min-width:320px}
 .cam-box video,.cam-box canvas{display:block;width:100%;transform:scaleX(-1)}
 .cam-box canvas{position:absolute;top:0;left:0}
+#petCanvas{position:absolute;bottom:12px;right:12px;width:15rem;height:15rem;image-rendering:pixelated;image-rendering:crisp-edges;z-index:5;background:rgba(0,0,0,0.15);border-radius:8px}
 .badge{position:absolute;top:12px;left:12px;padding:6px 14px;border-radius:20px;font-weight:600;font-size:13px;z-index:10;background:rgba(255,255,255,0.9);backdrop-filter:blur(8px)}
 .badge.good{color:var(--good)}
 .badge.warn{color:var(--warn)}
@@ -60,11 +61,12 @@ button:disabled{opacity:.4;cursor:default}
     <div class="badge good" id="badge">准备就绪</div>
     <video id="video" autoplay muted playsinline></video>
     <canvas id="overlay"></canvas>
+    <canvas id="petCanvas" width="240" height="240"></canvas>
   </div>
 
   <div class="panel">
     <div class="card">
-      <h3>👁 检测状态</h3>
+      <h3>👀 检测状态</h3>
       <div class="stat-row"><span>眼睛状态</span><span class="v" id="valEye">—</span></div>
       <div class="stat-row"><span>头部姿态</span><span class="v" id="valHead">—</span></div>
       <div class="stat-row"><span>东张西望</span><span class="v" id="valTurn">—</span></div>
@@ -113,6 +115,143 @@ var overlay = document.getElementById('overlay');
 var ctx = overlay.getContext('2d');
 var badge = document.getElementById('badge');
 var warnBanner = document.getElementById('warnBanner');
+
+// ===== 像素电子宠物 =====
+var petCanvas = document.getElementById('petCanvas');
+var petCtx = petCanvas.getContext('2d');
+var currentPet = 'idle';
+
+// 16x16像素猫表情
+// ===== 24x24 像素猫（情绪状态）=====
+var PET = {
+  happy: [
+    '000000000000000000000000',
+    '000000000000000000000000',
+    '000001111100001111100000',
+    '000111111110011111111000',
+    '000111111111111111111000',
+    '001111111111111111111100',
+    '011111111111111111111110',
+    '011111131111113111111110',
+    '011111131111113111111110',
+    '011111132111112311111110',
+    '011111111111111111111110',
+    '011111111111111111111110',
+    '011111311111111113111110',
+    '011111111111111111111110',
+    '001111111111111111111100',
+    '001111111111001111111100',
+    '201111111100000111111102',
+    '201111111000000011111102',
+    '200111111000000011111002',
+    '200111111100000111111002',
+    '000011111122222111110000',
+    '000001112222222211100000',
+    '000000122222222210000000',
+    '000000000111100000000000'
+  ],
+  worried: [
+    '000000000000000000000000',
+    '000000000000000000000000',
+    '000001111100001111100000',
+    '000111111110011111111000',
+    '000111111111111111111000',
+    '001111111111111111111100',
+    '011111111111111111111110',
+    '011111131111113111111110',
+    '011111131111113111111110',
+    '011111132111112311111110',
+    '011111111111111111111110',
+    '011111111111111111111110',
+    '011111311111111113111110',
+    '011111111111111111111110',
+    '001111111111111111111100',
+    '001111111111001111111100',
+    '201111111100000111111102',
+    '201111111000000011111102',
+    '200111111000000011111002',
+    '200111111100000111111002',
+    '000011111100000111110000',
+    '000001111111101111100000',
+    '000000111111111111000000',
+    '000000000111111000000000'
+  ],
+  angry: [
+    '000000000000000000000000',
+    '000000000000000000000000',
+    '000001111100001111100000',
+    '000111111110011111111000',
+    '000111111111111111111000',
+    '001111111111111111111100',
+    '011111111111111111111110',
+    '011111220000000022111110',
+    '011111002111112200111110',
+    '011111002111112200111110',
+    '011111111111111111111110',
+    '011111111111111111111110',
+    '011111111111111111111110',
+    '011111111111111111111110',
+    '001111111111111111111100',
+    '001111111111001111111100',
+    '201111111100000111111102',
+    '201111111000000011111102',
+    '200111111000000011111002',
+    '200111111100000111111002',
+    '000011111100000111110000',
+    '000001111111001111100000',
+    '000000111111111111000000',
+    '000000000111111000000000'
+  ],
+  sleep: [
+    '000000000000000000000000',
+    '000000000000000000000000',
+    '000001111100001111100000',
+    '000111111110011111111000',
+    '000111111111111111111000',
+    '001111111111111111111100',
+    '011111111111111111111110',
+    '011111111111111111111110',
+    '011111110222202211111110',
+    '011111111022220111111110',
+    '011111111122221111111110',
+    '011111111111111111111110',
+    '011111111111111111111110',
+    '011111111111111111111110',
+    '001111111111111111111100',
+    '001111111111001111111100',
+    '201111111100000111111102',
+    '201111111000000011111102',
+    '200111111000000011111002',
+    '200111111100000111111002',
+    '000011111100000111110000',
+    '000001111111001111100000',
+    '000000111111111111000000',
+    '000000000111100000000000'
+  ]
+};
+
+function drawPet(state) {
+  if (state === currentPet) return;
+  currentPet = state;
+  var f = PET[state] || PET.sleep;
+  var colorMap = {
+    happy:  {'0':'transparent','1':'#ff6b35','2':'#333','3':'#fff'},
+    worried:{'0':'transparent','1':'#e6b800','2':'#333','3':'#fff'},
+    angry:  {'0':'transparent','1':'#e74c3c','2':'#333','3':'#fff'},
+    sleep:  {'0':'transparent','1':'#5dade2','2':'#333','3':'#fff'}
+  };
+  var c = colorMap[state] || colorMap.happy;
+  petCtx.clearRect(0, 0, 240, 240);
+  for (var y = 0; y < 24; y++)
+    for (var x = 0; x < 24; x++)
+      if (f[y][x] !== '0') { petCtx.fillStyle = c[f[y][x]]; petCtx.fillRect(x * 10, y * 10, 10, 10); }
+}
+
+// 初始显示快乐猫
+drawPet('happy');
+
+// 然后 syncPet 在状态变化时调用
+
 var startBtn = document.getElementById('startBtn');
 var stopBtn = document.getElementById('stopBtn');
 var loadingMsg = document.getElementById('timerLabel');
@@ -215,7 +354,7 @@ function onResults(results) {
     } else if (eyesClosedRaw) {
       valEye.textContent = '眨眼 😐 (' + ear.toFixed(2) + ')';
     } else {
-      valEye.textContent = '睁开 👁 (' + ear.toFixed(2) + ')';
+      valEye.textContent = '睁开 👀 (' + ear.toFixed(2) + ')';
     }
 
     // 2. 低头检测
@@ -448,6 +587,7 @@ function syncPetState() {
   lastPetState = state;
   var petMap = {focused:'happy', distracted:'worried', away:'sleep'};
   fetch('http://10.10.10.1/pet?state=' + petMap[state], {mode:'no-cors'}).catch(function(){});
+  drawPet(petMap[state]);
 }
 
 function startPomodoro() {
