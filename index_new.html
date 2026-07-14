@@ -49,6 +49,16 @@ button:disabled{opacity:.4;cursor:default}
 .plan-task.done .task-name{text-decoration:line-through;color:var(--muted)}
 .plan-summary{text-align:center;font-size:12px;color:var(--muted);margin-top:8px;padding-top:8px;border-top:1px solid rgba(0,0,0,0.04)}
 .hidden{display:none}
+
+/* 专注分析 */
+.focus-pct{font-size:42px;font-weight:700;text-align:center;margin:4px 0}
+.focus-pct.high{color:var(--good)}
+.focus-pct.mid{color:var(--warn)}
+.focus-pct.low{color:var(--bad)}
+#focusChart{display:block;margin:0 auto;width:120px;height:120px}
+.chart-legend{display:flex;gap:12px;justify-content:center;font-size:11px;margin-top:6px}
+.chart-legend span{display:flex;align-items:center;gap:4px}
+.chart-dot{width:10px;height:10px;border-radius:50%;display:inline-block}
 </style>
 </head>
 <body>
@@ -70,6 +80,16 @@ button:disabled{opacity:.4;cursor:default}
       <div class="stat-row"><span>眼睛状态</span><span class="v" id="valEye">—</span></div>
       <div class="stat-row"><span>头部姿态</span><span class="v" id="valHead">—</span></div>
       <div class="stat-row"><span>东张西望</span><span class="v" id="valTurn">—</span></div>
+    </div>
+
+    <div class="card">
+      <h3>📊 专注分析</h3>
+      <div class="focus-pct high" id="focusPct">100%</div>
+      <canvas id="focusChart" width="120" height="120"></canvas>
+      <div class="chart-legend">
+        <span><span class="chart-dot" style="background:#27ae60"></span>专注</span>
+        <span><span class="chart-dot" style="background:#e67e22"></span>走神</span>
+      </div>
     </div>
 
     <div class="card">
@@ -129,6 +149,7 @@ function setDreamFace(face) {
 
 // 初始显示默认表情
 setDreamFace('sad');
+drawFocusChart(100);
 
 var startBtn = document.getElementById('startBtn');
 var stopBtn = document.getElementById('stopBtn');
@@ -338,14 +359,60 @@ function showWarn(msg) {
 }
 
 function updateStats() {
-  focusScoreEl.textContent = Math.round(focusScore);
+  var pct = Math.round(focusScore);
+  focusScoreEl.textContent = pct;
   distCountEl.textContent = distractCount;
+
+  // 专注分析
+  var pctEl = document.getElementById('focusPct');
+  if (pctEl) {
+    pctEl.textContent = pct + '%';
+    pctEl.className = 'focus-pct ' + (pct >= 70 ? 'high' : pct >= 40 ? 'mid' : 'low');
+  }
+  drawFocusChart(pct);
+
   if (sessionStart) {
     var secs = Math.floor((Date.now() - sessionStart) / 1000);
     var m = Math.floor(secs / 60);
     var s = secs % 60;
     timerEl.textContent = String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
   }
+}
+
+function drawFocusChart(pct) {
+  var canvas = document.getElementById('focusChart');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var cx = 60, cy = 60, r = 50;
+  ctx.clearRect(0, 0, 120, 120);
+
+  // 底色（走神）
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fillStyle = '#e67e22';
+  ctx.fill();
+
+  // 专注弧度
+  var angle = (pct / 100) * Math.PI * 2 - Math.PI / 2;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.arc(cx, cy, r, -Math.PI / 2, angle);
+  ctx.fillStyle = '#27ae60';
+  ctx.fill();
+
+  // 中心白圆（甜甜圈效果）
+  ctx.beginPath();
+  ctx.arc(cx, cy, 28, 0, Math.PI * 2);
+  ctx.fillStyle = '#fff';
+  ctx.fill();
+
+  // 中间数字
+  ctx.fillStyle = '#2d2d2d';
+  ctx.font = 'bold 16px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(pct + '%', cx, cy);
 }
 
 // ══════════ 启动/停止（使用旧项目的 Camera 工具类）══════════
