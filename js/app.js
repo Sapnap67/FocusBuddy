@@ -153,9 +153,20 @@
       },
       onTick: function(remaining) {
         window.FocusBuddyUI.updatePomodoroDisplay(AppState.pomodoro, remaining);
+        // 同步倒计时到 ESP32
+        if (window.ESP32 && (AppState.pomodoro === 'FOCUSING' || AppState.pomodoro === 'ON_BREAK')) {
+          var mins = Math.floor(remaining / 60);
+          var secs = remaining % 60;
+          window.ESP32.sendTimer(mins, secs);
+        }
       },
       onComplete: function(type) {
         window.FocusBuddyUI.notifyPomodoroComplete(type);
+        // 完成时 ESP32 庆祝
+        if (window.ESP32) {
+          if (type === 'focus') window.ESP32.syncPet('celebrate');
+          window.ESP32.sendTimer(0, 0);
+        }
       }
     });
   }
