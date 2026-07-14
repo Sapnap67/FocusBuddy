@@ -233,13 +233,12 @@
         AppState.distractionStart = null;
         AppState._warnedDistraction = false;
       }
+      AppState._warnedEyeClosed = false;
     } else if (status === 'eye_closed') {
       if (!AppState._warnedEyeClosed) {
         AppState._warnedEyeClosed = true;
         window.FocusBuddyUI.showWarning('😴 检测到闭眼，你是不是困了？');
       }
-    } else if (status === 'focused') {
-      AppState._warnedEyeClosed = false;
     } else if (status === 'away') {
       window.FocusBuddyUI.showWarning('检测到您离开屏幕，番茄钟已暂停');
       if (pomodoroTimer && (AppState.pomodoro === 'FOCUSING' || AppState.pomodoro === 'ON_BREAK')) {
@@ -289,7 +288,6 @@
       // 如果没有 FocusBuddyVision，显示等待状态
       var el = document.getElementById('vision-status');
       if (el) el.textContent = '模型加载中...';
-    }
     }
 
     // 设置变更回调
