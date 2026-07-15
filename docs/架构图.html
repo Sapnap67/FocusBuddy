@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FocusBuddy Architecture</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#1a1a2e;display:flex;justify-content:center;align-items:center;min-height:100vh;font-family:'Segoe UI',system-ui,sans-serif}
+svg{max-width:1000px;width:100%}
+text{font-family:'Segoe UI',system-ui,sans-serif}
+</style>
+</head>
+<body>
+<svg viewBox="0 0 960 700" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#ff6b35"/>
+    </marker>
+    <marker id="arrow-gray" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#8892b0"/>
+    </marker>
+    <linearGradient id="bg-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#16213e"/>
+      <stop offset="100%" stop-color="#1a1a2e"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="960" height="700" fill="url(#bg-grad)" rx="16"/>
+
+  <!-- Title -->
+  <text x="480" y="40" text-anchor="middle" fill="#ff6b35" font-size="22" font-weight="700">FocusBuddy — 系统架构图</text>
+
+  <!-- ====== LAYER 1: 用户交互层 ====== -->
+  <text x="32" y="80" fill="#8892b0" font-size="12" font-weight="600" text-transform="uppercase">用户交互层</text>
+  <rect x="30" y="88" width="900" height="1" fill="#2a2a4e"/>
+  
+  <!-- Browser Box -->
+  <rect x="60" y="100" width="280" height="140" rx="10" fill="#ff6b35" opacity="0.15" stroke="#ff6b35" stroke-width="1.5"/>
+  <text x="200" y="125" text-anchor="middle" fill="#ff6b35" font-size="14" font-weight="600">🌐 浏览器</text>
+  <text x="200" y="145" text-anchor="middle" fill="#e0e0e0" font-size="11">index_new.html</text>
+  <text x="200" y="165" text-anchor="middle" fill="#e0e0e0" font-size="11">摄像头画面 + 番茄钟 + 统计</text>
+  <text x="200" y="185" text-anchor="middle" fill="#e0e0e0" font-size="11">localStorage 数据持久化</text>
+  <text x="200" y="205" text-anchor="middle" fill="#e0e0e0" font-size="11">状态指示器 + 今日计划</text>
+  <text x="200" y="225" text-anchor="middle" fill="#8892b0" font-size="10">使用原生 HTML/CSS/JS</text>
+
+  <!-- ESP32 Matrix -->
+  <rect x="620" y="100" width="280" height="140" rx="10" fill="#27ae60" opacity="0.15" stroke="#27ae60" stroke-width="1.5"/>
+  <text x="760" y="125" text-anchor="middle" fill="#27ae60" font-size="14" font-weight="600">🖥️ ESP32-S3-Matrix</text>
+  <text x="760" y="145" text-anchor="middle" fill="#e0e0e0" font-size="11">8×8 NeoPixel LED 矩阵</text>
+  <text x="760" y="165" text-anchor="middle" fill="#e0e0e0" font-size="11">像素宠物：😊😟😡😴🎉</text>
+  <text x="760" y="185" text-anchor="middle" fill="#e0e0e0" font-size="11">数字倒计时：5×3字体</text>
+  <text x="760" y="205" text-anchor="middle" fill="#e0e0e0" font-size="11">警告闪烁（离开>10s）</text>
+  <text x="760" y="225" text-anchor="middle" fill="#8892b0" font-size="10">WiFi AP: FocusBuddy / 10.10.10.1</text>
+
+  <!-- ====== LAYER 2: 检测与处理层 ====== -->
+  <text x="32" y="280" fill="#8892b0" font-size="12" font-weight="600">检测与处理层</text>
+  <rect x="30" y="288" width="900" height="1" fill="#2a2a4e"/>
+
+  <!-- MediaPipe -->
+  <rect x="60" y="300" width="200" height="110" rx="10" fill="#f39c12" opacity="0.15" stroke="#f39c12" stroke-width="1.5"/>
+  <text x="160" y="325" text-anchor="middle" fill="#f39c12" font-size="13" font-weight="600">📷 摄像头+FaceMesh</text>
+  <text x="160" y="345" text-anchor="middle" fill="#e0e0e0" font-size="11">MediaPipe CDN</text>
+  <text x="160" y="365" text-anchor="middle" fill="#e0e0e0" font-size="11">468点面部网格</text>
+  <text x="160" y="385" text-anchor="middle" fill="#e0e0e0" font-size="11">实时帧处理</text>
+
+  <!-- Detection Algorithms -->
+  <rect x="380" y="300" width="200" height="110" rx="10" fill="#3498db" opacity="0.15" stroke="#3498db" stroke-width="1.5"/>
+  <text x="480" y="325" text-anchor="middle" fill="#3498db" font-size="13" font-weight="600">🧠 检测算法</text>
+  <text x="480" y="345" text-anchor="middle" fill="#e0e0e0" font-size="11">EAR 闭眼检测</text>
+  <text x="480" y="365" text-anchor="middle" fill="#e0e0e0" font-size="11">headRatio 低头检测</text>
+  <text x="480" y="385" text-anchor="middle" fill="#e0e0e0" font-size="11">turnRatio 转头检测</text>
+
+  <!-- State Machine -->
+  <rect x="700" y="300" width="200" height="110" rx="10" fill="#e74c3c" opacity="0.15" stroke="#e74c3c" stroke-width="1.5"/>
+  <text x="800" y="325" text-anchor="middle" fill="#e74c3c" font-size="13" font-weight="600">⚙️ 状态机</text>
+  <text x="800" y="345" text-anchor="middle" fill="#e0e0e0" font-size="11">focused 🟢</text>
+  <text x="800" y="365" text-anchor="middle" fill="#e0e0e0" font-size="11">distracted 🟡 → eye_closed</text>
+  <text x="800" y="385" text-anchor="middle" fill="#e0e0e0" font-size="11">away 🔴</text>
+
+  <!-- ====== LAYER 3: 数据与功能层 ====== -->
+  <text x="32" y="450" fill="#8892b0" font-size="12" font-weight="600">数据与功能层</text>
+  <rect x="30" y="458" width="900" height="1" fill="#2a2a4e"/>
+
+  <!-- Pomodoro -->
+  <rect x="60" y="470" width="170" height="100" rx="10" fill="#ff6b35" opacity="0.12" stroke="#ff6b35" stroke-width="1"/>
+  <text x="145" y="495" text-anchor="middle" fill="#ff6b35" font-size="12" font-weight="600">🍅 番茄钟</text>
+  <text x="145" y="515" text-anchor="middle" fill="#e0e0e0" font-size="11">25min专注/5min休息</text>
+  <text x="145" y="535" text-anchor="middle" fill="#e0e0e0" font-size="11">自动轮转</text>
+
+  <!-- Stats -->
+  <rect x="270" y="470" width="170" height="100" rx="10" fill="#27ae60" opacity="0.12" stroke="#27ae60" stroke-width="1"/>
+  <text x="355" y="495" text-anchor="middle" fill="#27ae60" font-size="12" font-weight="600">📊 统计管理</text>
+  <text x="355" y="515" text-anchor="middle" fill="#e0e0e0" font-size="11">localStorage存储</text>
+  <text x="355" y="535" text-anchor="middle" fill="#e0e0e0" font-size="11">Chart.js 图表</text>
+
+  <!-- Planner -->
+  <rect x="480" y="470" width="170" height="100" rx="10" fill="#3498db" opacity="0.12" stroke="#3498db" stroke-width="1"/>
+  <text x="565" y="495" text-anchor="middle" fill="#3498db" font-size="12" font-weight="600">📋 今日计划</text>
+  <text x="565" y="515" text-anchor="middle" fill="#e0e0e0" font-size="11">提示词→待办清单</text>
+  <text x="565" y="535" text-anchor="middle" fill="#e0e0e0" font-size="11">localStorage持久化</text>
+
+  <!-- Settings -->
+  <rect x="690" y="470" width="170" height="100" rx="10" fill="#9b59b6" opacity="0.12" stroke="#9b59b6" stroke-width="1"/>
+  <text x="775" y="495" text-anchor="middle" fill="#9b59b6" font-size="12" font-weight="600">⚙️ 设置</text>
+  <text x="775" y="515" text-anchor="middle" fill="#e0e0e0" font-size="11">专注/休息时长</text>
+  <text x="775" y="535" text-anchor="middle" fill="#e0e0e0" font-size="11">敏感度/通知/音效</text>
+
+  <!-- ====== LAYER 4: 通信层 ====== -->
+  <text x="32" y="610" fill="#8892b0" font-size="12" font-weight="600">通信层</text>
+  <rect x="30" y="618" width="900" height="1" fill="#2a2a4e"/>
+
+  <rect x="60" y="630" width="380" height="50" rx="8" fill="#8892b0" opacity="0.1" stroke="#8892b0" stroke-width="1"/>
+  <text x="250" y="655" text-anchor="middle" fill="#e0e0e0" font-size="12">🖧 WiFi HTTP (ESP32 AP: FocusBuddy / 10.10.10.1)</text>
+  <text x="250" y="670" text-anchor="middle" fill="#8892b0" font-size="10">GET /pet?state=happy|worried|angry|sleep|celebrate · GET /timer?m=X&s=Y · GET /alert · GET /status</text>
+
+  <rect x="480" y="630" width="380" height="50" rx="8" fill="#8892b0" opacity="0.1" stroke="#8892b0" stroke-width="1"/>
+  <text x="670" y="655" text-anchor="middle" fill="#e0e0e0" font-size="12">💾 浏览器 localStorage</text>
+  <text x="670" y="670" text-anchor="middle" fill="#8892b0" font-size="10">focusbuddy_stats_YYYY-MM-DD · focusbuddy_settings · focusbuddy_plan_YYYY-MM-DD</text>
+
+  <!-- ====== Arrow connections L1 → L2 ====== -->
+  <line x1="160" y1="240" x2="160" y2="298" stroke="#ff6b35" stroke-width="1.5" marker-end="url(#arrow)" stroke-dasharray="4,3"/>
+  <line x1="760" y1="240" x2="760" y2="298" stroke="#ff6b35" stroke-width="1.5" marker-end="url(#arrow)" stroke-dasharray="4,3"/>
+
+  <!-- L2 internal -->
+  <line x1="260" y1="355" x2="378" y2="355" stroke="#8892b0" stroke-width="1.5" marker-end="url(#arrow-gray)"/>
+  <line x1="580" y1="355" x2="698" y2="355" stroke="#8892b0" stroke-width="1.5" marker-end="url(#arrow-gray)"/>
+
+  <!-- L2 → L3 -->
+  <line x1="145" y1="410" x2="145" y2="468" stroke="#8892b0" stroke-width="1" marker-end="url(#arrow-gray)"/>
+  <line x1="355" y1="410" x2="355" y2="468" stroke="#8892b0" stroke-width="1" marker-end="url(#arrow-gray)"/>
+  <line x1="565" y1="410" x2="565" y2="468" stroke="#8892b0" stroke-width="1" marker-end="url(#arrow-gray)"/>
+  <line x1="775" y1="410" x2="775" y2="468" stroke="#8892b0" stroke-width="1" marker-end="url(#arrow-gray)"/>
+
+  <!-- L3 → ESP32 -->
+  <line x1="145" y1="570" x2="145" y2="600" stroke="#8892b0" stroke-width="1"/>
+  <line x1="145" y1="600" x2="760" y2="600" stroke="#8892b0" stroke-width="1"/>
+  <line x1="760" y1="600" x2="760" y2="628" stroke="#8892b0" stroke-width="1" marker-end="url(#arrow-gray)"/>
+
+  <!-- Legend -->
+  <rect x="60" y="690" width="14" height="14" rx="3" fill="#ff6b35" opacity="0.4"/>
+  <text x="80" y="702" fill="#8892b0" font-size="10">前端</text>
+  <rect x="140" y="690" width="14" height="14" rx="3" fill="#27ae60" opacity="0.4"/>
+  <text x="160" y="702" fill="#8892b0" font-size="10">硬件</text>
+  <rect x="220" y="690" width="14" height="14" rx="3" fill="#f39c12" opacity="0.4"/>
+  <text x="240" y="702" fill="#8892b0" font-size="10">检测</text>
+  <rect x="310" y="690" width="14" height="14" rx="3" fill="#3498db" opacity="0.4"/>
+  <text x="330" y="702" fill="#8892b0" font-size="10">处理</text>
+  <rect x="400" y="690" width="14" height="14" rx="3" fill="#e74c3c" opacity="0.4"/>
+  <text x="420" y="702" fill="#8892b0" font-size="10">状态机</text>
+</svg>
+</body>
+</html>

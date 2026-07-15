@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FocusBuddy Demo Flow</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#1a1a2e;display:flex;justify-content:center;align-items:center;min-height:100vh;font-family:'Segoe UI',system-ui,sans-serif}
+svg{max-width:900px;width:100%}
+</style>
+</head>
+<body>
+<svg viewBox="0 0 880 820" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#ff6b35"/>
+    </marker>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#27ae60"/>
+    </marker>
+    <marker id="arrow-yellow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#f39c12"/>
+    </marker>
+    <marker id="arrow-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#e74c3c"/>
+    </marker>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#16213e"/>
+      <stop offset="100%" stop-color="#1a1a2e"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="880" height="820" fill="url(#bg)" rx="16"/>
+
+  <text x="440" y="38" text-anchor="middle" fill="#ff6b35" font-size="20" font-weight="700">FocusBuddy — 演示流程图</text>
+
+  <!-- ====== Step 1: User opens page ====== -->
+  <rect x="290" y="60" width="300" height="50" rx="25" fill="#ff6b35" opacity="0.2" stroke="#ff6b35" stroke-width="2"/>
+  <text x="440" y="90" text-anchor="middle" fill="#ff6b35" font-size="14" font-weight="600">① 打开页面，点击"开始专注"</text>
+
+  <line x1="440" y1="110" x2="440" y2="140" stroke="#ff6b35" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- ====== Step 2: Camera + FaceMesh ====== -->
+  <rect x="265" y="145" width="350" height="55" rx="10" fill="#f39c12" opacity="0.2" stroke="#f39c12" stroke-width="2"/>
+  <text x="440" y="168" text-anchor="middle" fill="#f39c12" font-size="13" font-weight="600">② 摄像头启动 + FaceMesh 468点加载</text>
+  <text x="440" y="188" text-anchor="middle" fill="#e0e0e0" font-size="11">MediaPipe CDN 加载检测模型</text>
+
+  <line x1="440" y1="200" x2="440" y2="230" stroke="#f39c12" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- ====== Step 3: Timer starts ====== -->
+  <rect x="290" y="235" width="300" height="50" rx="10" fill="#ff6b35" opacity="0.2" stroke="#ff6b35" stroke-width="2"/>
+  <text x="440" y="258" text-anchor="middle" fill="#ff6b35" font-size="13" font-weight="600">③ 番茄钟 25:00 倒计时开始</text>
+  <text x="440" y="276" text-anchor="middle" fill="#e0e0e0" font-size="11">ESP32 显示倒计时数字</text>
+
+  <line x1="440" y1="285" x2="440" y2="315" stroke="#ff6b35" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- ====== Step 4: Detection loop ====== -->
+  <rect x="140" y="320" width="600" height="55" rx="10" fill="#3498db" opacity="0.15" stroke="#3498db" stroke-width="2"/>
+  <text x="440" y="343" text-anchor="middle" fill="#3498db" font-size="13" font-weight="600">④ 实时检测：每秒处理摄像头帧</text>
+  <text x="440" y="363" text-anchor="middle" fill="#e0e0e0" font-size="11">EAR闭眼 | headRatio低头 | turnRatio转头</text>
+
+  <!-- Branch: focused -->
+  <line x1="265" y1="375" x2="160" y2="420" stroke="#27ae60" stroke-width="2" marker-end="url(#arrow-green)"/>
+
+  <rect x="50" y="425" width="220" height="60" rx="10" fill="#27ae60" opacity="0.15" stroke="#27ae60" stroke-width="2"/>
+  <text x="160" y="450" text-anchor="middle" fill="#27ae60" font-size="13" font-weight="600">🟢 专注中</text>
+  <text x="160" y="470" text-anchor="middle" fill="#e0e0e0" font-size="11">宠物😊开心 · 番茄钟继续</text>
+
+  <!-- Branch: distracted -->
+  <line x1="440" y1="375" x2="440" y2="420" stroke="#f39c12" stroke-width="2" marker-end="url(#arrow-yellow)"/>
+
+  <rect x="330" y="425" width="220" height="60" rx="10" fill="#f39c12" opacity="0.15" stroke="#f39c12" stroke-width="2"/>
+  <text x="440" y="450" text-anchor="middle" fill="#f39c12" font-size="13" font-weight="600">🟡 走神了</text>
+  <text x="440" y="470" text-anchor="middle" fill="#e0e0e0" font-size="11">宠物😟担心 · 走神计时开始</text>
+
+  <!-- Branch: away -->
+  <line x1="615" y1="375" x2="720" y2="420" stroke="#e74c3c" stroke-width="2" marker-end="url(#arrow-red)"/>
+
+  <rect x="610" y="425" width="220" height="60" rx="10" fill="#e74c3c" opacity="0.15" stroke="#e74c3c" stroke-width="2"/>
+  <text x="720" y="450" text-anchor="middle" fill="#e74c3c" font-size="13" font-weight="600">🔴 离开屏幕</text>
+  <text x="720" y="470" text-anchor="middle" fill="#e0e0e0" font-size="11">宠物😴睡觉 · 番茄钟暂停</text>
+
+  <!-- Return arrow from away/distracted → focused -->
+  <path d="M160,485 L160,510 L440,510 L440,530" stroke="#27ae60" stroke-width="1.5" fill="none" stroke-dasharray="5,3" marker-end="url(#arrow-green)"/>
+  <path d="M440,485 L440,510" stroke="#27ae60" stroke-width="1.5" fill="none" stroke-dasharray="5,3" marker-end="url(#arrow-green)"/>
+  <path d="M720,485 L720,510 L440,510 L440,530" stroke="#27ae60" stroke-width="1.5" fill="none" stroke-dasharray="5,3" marker-end="url(#arrow-green)"/>
+  <text x="440" y="505" text-anchor="middle" fill="#27ae60" font-size="10">面部回正→恢复专注</text>
+
+  <!-- ====== Step 5: Pomodoro Complete ====== -->
+  <rect x="265" y="540" width="350" height="50" rx="10" fill="#ff6b35" opacity="0.2" stroke="#ff6b35" stroke-width="2"/>
+  <text x="440" y="563" text-anchor="middle" fill="#ff6b35" font-size="13" font-weight="600">⑤ 番茄钟完成 → 自动进入休息</text>
+  <text x="440" y="580" text-anchor="middle" fill="#e0e0e0" font-size="11">宠物🎉庆祝 · ⭐计数+1 · 桌面通知</text>
+
+  <line x1="440" y1="590" x2="440" y2="620" stroke="#ff6b35" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- ====== Step 6: Data Recording ====== -->
+  <rect x="265" y="625" width="350" height="50" rx="10" fill="#27ae60" opacity="0.15" stroke="#27ae60" stroke-width="2"/>
+  <text x="440" y="648" text-anchor="middle" fill="#27ae60" font-size="13" font-weight="600">⑥ 数据记录 + 图表更新</text>
+  <text x="440" y="666" text-anchor="middle" fill="#e0e0e0" font-size="11">localStorage存专注/走神/番茄数 → Chart.js刷新</text>
+
+  <line x1="440" y1="675" x2="440" y2="705" stroke="#27ae60" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- ====== Step 7: Back to start or done ====== -->
+  <rect x="265" y="710" width="350" height="50" rx="25" fill="#ff6b35" opacity="0.15" stroke="#ff6b35" stroke-width="2" stroke-dasharray="5,3"/>
+  <text x="440" y="735" text-anchor="middle" fill="#ff6b35" font-size="13" font-weight="600">⑦ 休息结束 → 回到专注 / 点击停止</text>
+  <text x="440" y="753" text-anchor="middle" fill="#e0e0e0" font-size="11">自动循环或手动结束</text>
+
+  <line x1="440" y1="760" x2="440" y2="790" stroke="#ff6b35" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <path d="M440,790 Q440,810 290,810 L290,100" stroke="#ff6b35" stroke-width="1" fill="none" stroke-dasharray="5,3"/>
+  <text x="200" y="805" fill="#8892b0" font-size="10" font-style="italic">循环</text>
+
+  <!-- Legend -->
+  <rect x="30" y="790" width="10" height="10" rx="2" fill="#27ae60"/>
+  <text x="46" y="800" fill="#8892b0" font-size="9">专注</text>
+  <rect x="96" y="790" width="10" height="10" rx="2" fill="#f39c12"/>
+  <text x="112" y="800" fill="#8892b0" font-size="9">走神</text>
+  <rect x="162" y="790" width="10" height="10" rx="2" fill="#e74c3c"/>
+  <text x="178" y="800" fill="#8892b0" font-size="9">离开</text>
+</svg>
+</body>
+</html>
