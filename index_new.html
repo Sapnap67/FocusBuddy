@@ -99,6 +99,14 @@ button:disabled{opacity:.4;cursor:default}
       </div>
     </div>
 
+    <div class="card" id="todaySummary">
+      <h3>📋 今日专注摘要</h3>
+      <div class="stat-row"><span>⏱ 专注时长</span><span class="v" id="tsFocus">0m</span></div>
+      <div class="stat-row"><span>⚠️ 走神次数</span><span class="v" id="tsDistract">0</span></div>
+      <div class="stat-row"><span>🍅 番茄完成</span><span class="v" id="tsPomo">0</span></div>
+      <div class="stat-row"><span>📊 专注率</span><span class="v" id="tsRate">0%</span></div>
+    </div>
+
     <div class="card">
       <h3>🍅 番茄计时</h3>
       <div class="timer-label" id="pomodoroLabel">准备就绪</div>
@@ -578,6 +586,11 @@ function startPomodoro() {
       badge.textContent = '✅ 完成！';
       badge.className = 'badge good';
       pomodoroLabel.textContent = '✅ 完成！';
+      // Update today summary
+      var ts = loadTodayStats();
+      ts.pomoCount++;
+      saveTodayStats(ts);
+      updateTodaySummary();
       // Auto-reset to 25:00
       pomodoroRemaining = POMODORO_SECS;
       updatePomodoroDisplay();
@@ -828,6 +841,63 @@ mainBtn.onclick = function() {
     };
   }
 })();
+
+// ==================== 今日专注摘要 ====================
+var TS_KEY = 'focusbuddy_today_summary';
+
+function getDateKey() {
+  var d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function loadTodayStats() {
+  try {
+    var raw = localStorage.getItem(TS_KEY);
+    if (raw) {
+      var data = JSON.parse(raw);
+      if (data.date === getDateKey()) return data;
+    }
+  } catch(e) {}
+  return { date: getDateKey(), focusSeconds: 0, distractCount: 0, pomoCount: 0 };
+}
+
+function saveTodayStats(data) {
+  try { localStorage.setItem(TS_KEY, JSON.stringify(data)); } catch(e) {}
+}
+
+function updateTodaySummary() {
+  var data = loadTodayStats();
+  
+  // Update focus time from session (if running)
+  if (sessionStart && badge.className === 'badge good') {
+    data.focusSeconds = Math.max(data.focusSeconds, Math.floor((Date.now() - sessionStart) / 1000));
+  }
+  
+  // Distractions
+  data.distractCount = Math.max(data.distractCount, distractCount);
+  
+  saveTodayStats(data);
+  
+  var mins = Math.floor(data.focusSeconds / 60);
+  var pct = data.focusSeconds > 0 ? Math.round(data.focusSeconds / (data.focusSeconds + data.distractCount * 10) * 100) : 0;
+  
+  document.getElementById('tsFocus').textContent = mins + 'm';
+  document.getElementById('tsDistract').textContent = data.distractCount;
+  document.getElementById('tsPomo').textContent = data.pomoCount;
+  document.getElementById('tsRate').textContent = pct + '%';
+}
+
+// Hook: call on pomodoro complete
+var _origComplete = pomodoroInterval;
+// Override the pomodoro complete section
+var _origSetInterval = setInterval;
+
+// Hook into distraction count changes
+var _distractInterval = setInterval(function() {
+  updateTodaySummary();
+}, 3000);
+
+updateTodaySummary();
 
 </script>
 </body>
