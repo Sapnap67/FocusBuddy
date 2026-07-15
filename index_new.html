@@ -261,6 +261,9 @@ window.setAlertVoice = function(filePath) {
   if (alertAudio) { alertAudio.src = filePath; alertAudio.load(); }
 };
 
+// 加载自定义语音
+setAlertVoice('alert_voice.mp3');
+
 // 画面尺寸（修正宽高比失真 — 旧项目坑2）
 var frameW = 640, frameH = 480;
 
