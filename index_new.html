@@ -115,10 +115,27 @@ button:disabled{opacity:.4;cursor:default}
     </div>
 
     <div class="card">
+      <h3>📞 家长绑定</h3>
+      <div style="display:flex;gap:6px">
+        <input id="parentPhone" type="tel" placeholder="输入家长手机号" style="flex:1;border:1px solid #ddd;border-radius:6px;padding:6px 8px;font-size:13px;font-family:inherit">
+        <button id="bindPhoneBtn" class="btn-sm">绑定</button>
+      </div>
+      <div id="parentStatus" style="margin-top:6px;font-size:11px;color:var(--muted)"></div>
+      <div id="alertLog" style="margin-top:6px;font-size:11px;color:var(--bad);max-height:60px;overflow-y:auto"></div>
+    </div>
+
+    <div class="card">
       <h3>📋 今日计划</h3>
       <div class="plan-input-row">
         <textarea id="planInput" rows="3" placeholder="写今天要做的事，每行一条&#10;例如：&#10;写论文 2小时&#10;整理数据 30分钟&#10;做PPT"></textarea>
         <button id="planGenerateBtn" class="btn-sm">生成计划</button>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:6px;align-items:center">
+        <input id="dsApiKey" type="password" placeholder="DeepSeek Key (可选)" style="flex:1;border:1px solid #ddd;border-radius:6px;padding:5px 6px;font-size:11px;font-family:inherit">
+        <label style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:4px;white-space:nowrap">
+          <input id="smartCheck" type="checkbox" checked> SMART
+        </label>
+        <button id="toggleAiPlan" class="btn-sm" style="background:#6c5ce7;font-size:10px;padding:5px 8px">AI</button>
       </div>
       <div id="planList" class="plan-list"></div>
       <div id="planSummary" class="plan-summary hidden">
@@ -796,6 +813,195 @@ mainBtn.onclick = function() {
     };
   }
 })();
+
+// ==================== 家长绑定 & 离开警报 ====================
+var PARENT_KEY = 'focus…arent';
+var awayStartTime = null;
+var alert5minSent = false;
+var alert6minSent = false;
+var alert10minSent = false;
+
+// Load parent phone
+var parentPhone = localStorage.getItem(PARENT_KEY) || '';
+var phoneInput = document.getElementById('parentPhone');
+var bindBtn = document.getElementById('bindPhoneBtn');
+var parentStatus = document.getElementById('parentStatus');
+var alertLog = document.getElementById('alertLog');
+
+if (parentPhone) {
+  phoneInput.value = parentPhone;
+  parentStatus.textContent = '已绑定: ' + parentPhone.slice(0,3) + '****' + parentPhone.slice(-4);
+  parentStatus.style.color = 'var(--good)';
+}
+
+bindBtn.onclick = function() {
+  var val = phoneInput.value.trim();
+  if (val.length < 8) {
+    parentStatus.textContent = '请输入有效手机号';
+    parentStatus.style.color = 'var(--bad)';
+    return;
+  }
+  parentPhone = val;
+  localStorage.setItem(PARENT_KEY, val);
+  parentStatus.textContent = '已绑定: ' + val.slice(0,3) + '****' + val.slice(-4);
+  parentStatus.style.color = 'var(--good)';
+};
+
+function addAlertLog(msg) {
+  var div = document.createElement('div');
+  div.textContent = new Date().toLocaleTimeString() + ' ' + msg;
+  alertLog.appendChild(div);
+  alertLog.scrollTop = alertLog.scrollHeight;
+}
+
+function speak(text) {
+  if (!window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  var u = new SpeechSynthesisUtterance(text);
+  u.lang = 'zh-CN';
+  u.rate = 1.0;
+  window.speechSynthesis.speak(u);
+}
+
+// Monitor away duration every second
+setInterval(function() {
+  if (!parentPhone) return;
+  
+  // Determine if currently away (no face detected for a while)
+  var text = badge.textContent;
+  var isAway = text.indexOf('离开画面') >= 0;
+  
+  if (!isAway) {
+    // Student is back - reset timers
+    awayStartTime = null;
+    alert5minSent = false;
+    alert6minSent = false;
+    alert10minSent = false;
+    return;
+  }
+  
+  // Start tracking away duration
+  var now = Date.now();
+  if (awayStartTime === null) {
+    awayStartTime = now;
+    return;
+  }
+  
+  var awaySecs = Math.floor((now - awayStartTime) / 1000);
+  
+  // 5 minutes away
+  if (awaySecs >= 300 && !alert5minSent) {
+    alert5minSent = true;
+    speak('同学，请回到座位学习！');
+    addAlertLog('⚠ 离开5分钟 - 已发送语音提醒');
+  }
+  
+  // 6 minutes away (5min + 1min grace period)
+  if (awaySecs >= 360 && !alert6minSent) {
+    alert6minSent = true;
+    speak('正在向家长发送警告！');
+    addAlertLog('📱 已向 ' + parentPhone.slice(0,3) + '****' + parentPhone.slice(-4) + ' 发送短信：学生离开座位超过5分钟');
+  }
+  
+  // 10 minutes away
+  if (awaySecs >= 600 && !alert10minSent) {
+    alert10minSent = true;
+    speak('同学，请立即回到座位！已再次通知家长。');
+    addAlertLog('📱 已向 ' + parentPhone.slice(0,3) + '****' + parentPhone.slice(-4) + ' 发送短信：学生离开座位超过10分钟');
+  }
+}, 1000);
+
+
+// ==================== DeepSeek API 计划拆解 ====================
+var DS_KEY_STORAGE = 'focusbuddy_ds_key';
+var dsApiKeyInput = document.getElementById('dsApiKey');
+var smartCheck = document.getElementById('smartCheck');
+var toggleAiBtn = document.getElementById('toggleAiPlan');
+var aiPlanEnabled = false;
+
+// Load saved API key
+try {
+  var saved = localStorage.getItem(DS_KEY_STORAGE);
+  if (saved) { dsApiKeyInput.value = saved; aiPlanEnabled = true; toggleAiBtn.style.background = '#27ae60'; }
+} catch(e) {}
+
+// Save key on input
+dsApiKeyInput.addEventListener('change', function() {
+  var val = dsApiKeyInput.value.trim();
+  if (val) {
+    localStorage.setItem(DS_KEY_STORAGE, val);
+    aiPlanEnabled = true;
+    toggleAiBtn.style.background = '#27ae60';
+  }
+});
+
+toggleAiBtn.onclick = function() {
+  aiPlanEnabled = !aiPlanEnabled;
+  toggleAiBtn.style.background = aiPlanEnabled ? '#27ae60' : '#6c5ce7';
+};
+
+async function callDeepSeek(prompt) {
+  var key = dsApiKeyInput.value.trim();
+  if (!key) return null;
+  try {
+    var resp = await fetch('https://api.deepseek.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','Authorization':'Bearer '+key},
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages: [
+          {role: 'system', content: 'You are a task planning assistant. Given a user input, decompose it into specific, measurable tasks. Each task should have a time estimate (in minutes). If the task is already detailed enough, return it EXACTLY AS IS without changes. Output as JSON array: [{"text":"task description","minutes":30}]'},
+          {role: 'user', content: prompt}
+        ],
+        temperature: 0.3,
+        max_tokens: 1000
+      })
+    });
+    var data = await resp.json();
+    var text = data.choices[0].message.content;
+    // Try to parse JSON from response
+    var match = text.match(/\[.*?\]/s);
+    if (match) return JSON.parse(match[0]);
+    return null;
+  } catch(e) {
+    console.error('DeepSeek error:', e);
+    return null;
+  }
+}
+
+// Override generateBtn to add AI step
+var origGenerate = planGenerateBtn.onclick;
+planGenerateBtn.onclick = async function() {
+  if (!aiPlanEnabled || !dsApiKeyInput.value.trim()) {
+    if (origGenerate) origGenerate();
+    return;
+  }
+  
+  var raw = planInput.value.trim();
+  if (!raw) return;
+  
+  planGenerateBtn.textContent = 'AI分析中...';
+  planGenerateBtn.disabled = true;
+  
+  var smartPrompt = smartCheck.checked ? 
+    ' Apply SMART criteria: check if each task is Specific, Measurable, Achievable, Relevant, Time-bound. If a task is vague, suggest a more specific version. If already detailed, keep unchanged.' : '';
+  
+  var result = await callDeepSeek(raw + ' Decompose into tasks with time estimates.' + smartPrompt);
+  
+  if (result && Array.isArray(result) && result.length > 0) {
+    // Use AI result
+    var tasks = result.map(function(t) { return t.text + ' ' + t.minutes + '分钟'; }).join('\n');
+    planInput.value = tasks;
+    // Then call original handler
+    if (origGenerate) origGenerate();
+  } else {
+    // Fallback to original
+    if (origGenerate) origGenerate();
+  }
+  
+  planGenerateBtn.textContent = '生成计划';
+  planGenerateBtn.disabled = false;
+};
 
 </script>
 </body>
