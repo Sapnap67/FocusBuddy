@@ -4,6 +4,8 @@ from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
 from pptx.enum.shapes import MSO_SHAPE
 
+import os
+
 prs = Presentation()
 prs.slide_width = Inches(13.333)
 prs.slide_height = Inches(7.5)
@@ -18,12 +20,20 @@ MUTED = RGBColor(0x88, 0x92, 0xB0)
 GREEN = RGBColor(0x27, 0xAE, 0x60)
 YELLOW = RGBColor(0xF3, 0x9C, 0x12)
 RED = RGBColor(0xE7, 0x4C, 0x3C)
+BLUE = RGBColor(0x34, 0x98, 0xDB)
+PURPLE = RGBColor(0x9B, 0x59, 0xB6)
+IMG_BG = RGBColor(0x20, 0x2A, 0x44)
+
+# Project base
+BASE = r"C:\Users\HUAWEI\Desktop\openclaw\FocusBuddy_v3"
+
 
 def set_slide_bg(slide, color):
     bg = slide.background
     fill = bg.fill
     fill.solid()
     fill.fore_color.rgb = color
+
 
 def add_rect(slide, left, top, width, height, color, alpha=None):
     shape = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, left, top, width, height)
@@ -32,6 +42,27 @@ def add_rect(slide, left, top, width, height, color, alpha=None):
     shape.line.fill.background()
     shape.shadow.inherit = False
     return shape
+
+
+def add_pic_frame(slide, left, top, width, height, label="📷 截图"):
+    """Add an image placeholder with label"""
+    shape = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, left, top, width, height)
+    shape.fill.solid()
+    shape.fill.fore_color.rgb = IMG_BG
+    shape.line.color.rgb = MUTED
+    shape.line.width = Pt(1.5)
+    shape.shadow.inherit = False
+    # Label in center
+    txBox = slide.shapes.add_textbox(left, top + height / 2 - Inches(0.3), width, Inches(0.6))
+    tf = txBox.text_frame
+    tf.word_wrap = True
+    p = tf.paragraphs[0]
+    p.text = label
+    p.font.size = Pt(14)
+    p.font.color.rgb = MUTED
+    p.alignment = PP_ALIGN.CENTER
+    return shape
+
 
 def add_text_box(slide, left, top, width, height, text, font_size=18, color=LIGHT, bold=False, alignment=PP_ALIGN.LEFT):
     txBox = slide.shapes.add_textbox(left, top, width, height)
@@ -45,8 +76,9 @@ def add_text_box(slide, left, top, width, height, text, font_size=18, color=LIGH
     p.alignment = alignment
     return txBox
 
-def add_bullet_slide(slide, items, left=Inches(0.8), top=Inches(2.2), width=Inches(11.5)):
-    txBox = slide.shapes.add_textbox(left, top, width, Inches(4.5))
+
+def add_bullet_slide(slide, items, left=Inches(0.8), top=Inches(2.2), width=Inches(11.5), height=Inches(5.0), font_size=15, color=LIGHT):
+    txBox = slide.shapes.add_textbox(left, top, width, height)
     tf = txBox.text_frame
     tf.word_wrap = True
     for i, item in enumerate(items):
@@ -55,9 +87,18 @@ def add_bullet_slide(slide, items, left=Inches(0.8), top=Inches(2.2), width=Inch
         else:
             p = tf.add_paragraph()
         p.text = item
-        p.font.size = Pt(16)
-        p.font.color.rgb = LIGHT
-        p.space_after = Pt(8)
+        p.font.size = Pt(font_size)
+        p.font.color.rgb = color
+        p.space_after = Pt(6)
+
+
+def add_img(slide, path, left, top, width, height):
+    """Add image if exists and format is supported, otherwise add placeholder"""
+    if os.path.exists(path) and path.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.bmp')):
+        slide.shapes.add_picture(path, left, top, width, height)
+        return True
+    return False
+
 
 # =========================================
 # Slide 1: Cover
@@ -97,7 +138,7 @@ add_bullet_slide(slide, [
     "",
     "📊 研究表明：平均每 15 分钟走神 1 次",
     "💡 需要的是「看得见的专注伴侣」，而不是又一个闹钟"
-], top=Inches(2.6))
+], top=Inches(2.6), font_size=16)
 
 # =========================================
 # Slide 3: Solution
@@ -112,27 +153,31 @@ add_text_box(slide, Inches(0.8), Inches(1.4), Inches(11.5), Inches(0.8),
              "FocusBuddy — 专注检测 + 番茄钟 + 宠物反馈 的三合一闭环",
              font_size=26, color=ORANGE, bold=True)
 
-# Flow boxes
+# Flow boxes (higher to avoid overflow)
 flow_data = [
-    (Inches(0.5), Inches(2.6), Inches(3.8), Inches(1.2), "📷 摄像头检测", "MediaPipe FaceMesh 468点\n面部朝向 + 闭眼 + 转头", RGBColor(0xF3, 0x9C, 0x12)),
-    (Inches(4.8), Inches(2.6), Inches(3.8), Inches(1.2), "🧠 状态判定", "专注 🟢  /  走神 🟡  /  离开 🔴", RGBColor(0x34, 0x98, 0xDB)),
-    (Inches(9.1), Inches(2.6), Inches(3.8), Inches(1.2), "🐱 三重反馈", "番茄钟 · 宠物表情 · 数据统计", RGBColor(0x27, 0xAE, 0x60)),
+    (Inches(0.5), Inches(2.4), Inches(3.8), Inches(1.4), "📷 摄像头检测", "MediaPipe FaceMesh 468点\n→ 面部朝向 + 闭眼 + 转头", RGBColor(0xF3, 0x9C, 0x12)),
+    (Inches(4.8), Inches(2.4), Inches(3.8), Inches(1.4), "🧠 状态判定", "专注 🟢 / 走神 🟡 / 离开 🔴", RGBColor(0x34, 0x98, 0xDB)),
+    (Inches(9.1), Inches(2.4), Inches(3.8), Inches(1.4), "🐱 三重反馈", "番茄钟 · 宠物表情 · 数据统计", RGBColor(0x27, 0xAE, 0x60)),
 ]
 for (l, t, w, h, title, desc, color) in flow_data:
     box = add_rect(slide, l, t, w, h, color, 0.15)
-    add_text_box(slide, l + Inches(0.2), t + Inches(0.1), w - Inches(0.4), Inches(0.5),
-                 title, font_size=18, color=color, bold=True)
-    add_text_box(slide, l + Inches(0.2), t + Inches(0.55), w - Inches(0.4), Inches(0.6),
-                 desc, font_size=14, color=LIGHT)
+    add_text_box(slide, l + Inches(0.2), t + Inches(0.15), w - Inches(0.4), Inches(0.4),
+                 title, font_size=17, color=color, bold=True)
+    add_text_box(slide, l + Inches(0.2), t + Inches(0.55), w - Inches(0.4), Inches(0.7),
+                 desc, font_size=13, color=LIGHT)
 
 add_bullet_slide(slide, [
     "▸ 不是简单的番茄钟 — 它知道你有没有真的在看屏幕",
     "▸ 不是单纯的摄像头 — 走神时像素宠物会提醒你",
     "▸ 两者联动形成闭环：检测 → 反馈 → 激励"
-], top=Inches(4.2))
+], top=Inches(4.1), font_size=15)
+
+# Solution diagram placeholder
+add_pic_frame(slide, Inches(0.8), Inches(4.8), Inches(11.5), Inches(2.2),
+              "📸 系统闭环流程图（检测 → 判定 → 反馈 → 激励）")
 
 # =========================================
-# Slide 4: Web Interface Demo
+# Slide 4: Web Interface Demo (左文字 + 右截图)
 # =========================================
 slide = prs.slides.add_slide(prs.slide_layouts[6])
 set_slide_bg(slide, DARK_BG)
@@ -140,7 +185,7 @@ add_rect(slide, Inches(0.5), Inches(0.3), Inches(3.2), Inches(0.6), ORANGE)
 add_text_box(slide, Inches(0.7), Inches(0.35), Inches(3), Inches(0.5),
              "Web 仪表盘", font_size=22, color=WHITE, bold=True)
 
-add_text_box(slide, Inches(0.8), Inches(1.3), Inches(11), Inches(0.7),
+add_text_box(slide, Inches(0.8), Inches(1.2), Inches(11), Inches(0.6),
              "🎬 现场演示：从打开到番茄完成全流程", font_size=20, color=ORANGE)
 
 items = [
@@ -152,10 +197,16 @@ items = [
     "⑥ 📋 今日计划：输入提示词自动生成待办清单 + 持久化",
     "⑦ 番茄完成 → 🎉 庆祝动画 + 桌面通知 + ⭐ 计数 + 音效",
 ]
-add_bullet_slide(slide, items, top=Inches(2.0))
+add_bullet_slide(slide, items, top=Inches(1.8), width=Inches(6.5), font_size=14)
+
+# Right side: screenshot placeholders
+add_pic_frame(slide, Inches(7.8), Inches(1.2), Inches(5), Inches(2.9),
+              "📸 主界面截图\n(摄像头 + 番茄钟 + 宠物)")
+add_pic_frame(slide, Inches(7.8), Inches(4.3), Inches(5), Inches(2.8),
+              "📸 统计数据截图\n(饼图 + 柱状图 + 今日计划)")
 
 # =========================================
-# Slide 5: Hardware ESP32
+# Slide 5: Hardware ESP32 (左图片 + 右列表)
 # =========================================
 slide = prs.slides.add_slide(prs.slide_layouts[6])
 set_slide_bg(slide, DARK_BG)
@@ -163,9 +214,23 @@ add_rect(slide, Inches(0.5), Inches(0.3), Inches(3.2), Inches(0.6), ORANGE)
 add_text_box(slide, Inches(0.7), Inches(0.35), Inches(3), Inches(0.5),
              "ESP32 像素宠物", font_size=22, color=WHITE, bold=True)
 
-add_text_box(slide, Inches(0.8), Inches(1.3), Inches(11), Inches(0.7),
+add_text_box(slide, Inches(0.8), Inches(1.1), Inches(11), Inches(0.6),
              "🖥️ Waveshare ESP32-S3-Matrix · 8×8 NeoPixel LED", font_size=20, color=ORANGE)
 
+# Left: emoji images grid
+emoji_top = Inches(1.8)
+emoji_size = Inches(1.5)
+add_img(slide, os.path.join(BASE, "dream-emoji", "happy.png"), Inches(0.8), emoji_top, emoji_size, emoji_size)
+add_img(slide, os.path.join(BASE, "dream-emoji", "angry.png"), Inches(2.6), emoji_top, emoji_size, emoji_size)
+add_pic_frame(slide, Inches(4.4), emoji_top, emoji_size, emoji_size,
+              "😊 happy")
+# Pet picture frame
+add_pic_frame(slide, Inches(0.8), Inches(3.6), Inches(3.8), Inches(1.8),
+              "📸 ESP32 实物照片")
+add_pic_frame(slide, Inches(4.8), Inches(3.6), Inches(2.0), Inches(3.4),
+              "📸 8×8 矩阵\n像素表情")
+
+# Right: bullet list (larger height)
 add_bullet_slide(slide, [
     "😊 开心 (绿) — 专注中 → 偶尔眨眼动画",
     "😟 担心 (黄) — 走神/转头 → 提醒你回来",
@@ -174,14 +239,12 @@ add_bullet_slide(slide, [
     "🎉 庆祝 (橙) — 番茄完成 → 3帧动画循环 (5s)",
     "",
     "📟 倒计时数字显示 — 5×3自定义字体渲染",
-    "   GET /timer?m=25&s=00 → 两数字+冒号闪烁",
-    "",
-    "🌐 WiFi AP 模式 — SSID: FocusBuddy / IP: 10.10.10.1",
+    "🌐 WiFi AP 模式 — SSID: FocusBuddy",
     "   HTTP API: /pet /timer /alert /status"
-], top=Inches(2.0))
+], left=Inches(7.2), top=Inches(1.6), width=Inches(5.5), font_size=14)
 
 # =========================================
-# Slide 6: Technology
+# Slide 6: Technology (含架构图 + 代码截图)
 # =========================================
 slide = prs.slides.add_slide(prs.slide_layouts[6])
 set_slide_bg(slide, DARK_BG)
@@ -189,8 +252,8 @@ add_rect(slide, Inches(0.5), Inches(0.3), Inches(3.2), Inches(0.6), ORANGE)
 add_text_box(slide, Inches(0.7), Inches(0.35), Inches(3), Inches(0.5),
              "技术实现", font_size=22, color=WHITE, bold=True)
 
-add_text_box(slide, Inches(0.8), Inches(1.3), Inches(11), Inches(0.7),
-             "全栈架构：原生 JS × MediaPipe × ESP32", font_size=20, color=ORANGE)
+add_text_box(slide, Inches(0.8), Inches(1.1), Inches(11), Inches(0.6),
+             "全栈架构：原生 JS × MediaPipe × ESP32 — 零框架、零后端", font_size=20, color=ORANGE)
 
 left_items = [
     "👁 视觉检测（Vickie）",
@@ -221,7 +284,7 @@ right_items = [
     "  · GET /status (JSON)",
 ]
 
-txBox = slide.shapes.add_textbox(Inches(0.8), Inches(2.0), Inches(5.8), Inches(5))
+txBox = slide.shapes.add_textbox(Inches(0.8), Inches(1.8), Inches(5.8), Inches(5))
 tf = txBox.text_frame
 tf.word_wrap = True
 for i, item in enumerate(left_items):
@@ -232,7 +295,7 @@ for i, item in enumerate(left_items):
     p.font.bold = not item.startswith("  ")
     p.space_after = Pt(2)
 
-txBox2 = slide.shapes.add_textbox(Inches(7), Inches(2.0), Inches(5.8), Inches(5))
+txBox2 = slide.shapes.add_textbox(Inches(7), Inches(1.8), Inches(5.8), Inches(5))
 tf2 = txBox2.text_frame
 tf2.word_wrap = True
 for i, item in enumerate(right_items):
@@ -242,6 +305,10 @@ for i, item in enumerate(right_items):
     p.font.color.rgb = LIGHT if item.startswith("  ") else ORANGE
     p.font.bold = not item.startswith("  ")
     p.space_after = Pt(2)
+
+# Architecture diagram placeholder
+add_pic_frame(slide, Inches(0.8), Inches(4.6), Inches(11.7), Inches(2.4),
+              "📸 系统架构图 (浏览器 → FaceMesh → ESP32 → WebSocket)")
 
 # =========================================
 # Slide 7: Innovation
@@ -280,7 +347,7 @@ for ri, row in enumerate(rows):
                      cell, font_size=14, color=ORANGE if ci == 0 else LIGHT, bold=(ci == 2))
 
 # =========================================
-# Slide 8: Demo Video
+# Slide 8: Demo Video (左时间轴 + 右截图)
 # =========================================
 slide = prs.slides.add_slide(prs.slide_layouts[6])
 set_slide_bg(slide, DARK_BG)
@@ -288,7 +355,7 @@ add_rect(slide, Inches(0.5), Inches(0.3), Inches(3.2), Inches(0.6), ORANGE)
 add_text_box(slide, Inches(0.7), Inches(0.35), Inches(3), Inches(0.5),
              "演示视频", font_size=22, color=WHITE, bold=True)
 
-add_text_box(slide, Inches(0.8), Inches(1.5), Inches(11), Inches(1),
+add_text_box(slide, Inches(0.8), Inches(1.2), Inches(11), Inches(0.7),
              "🎬 完整使用流程（2分钟）", font_size=28, color=ORANGE, bold=True)
 
 add_bullet_slide(slide, [
@@ -301,10 +368,50 @@ add_bullet_slide(slide, [
     "📌 01:40  查看统计 → 饼图 / 柱状图 / 今日计划",
     "",
     "💡 备用方案：如现场网络卡顿，播放录屏",
-], top=Inches(2.5))
+], left=Inches(0.8), top=Inches(1.9), width=Inches(7.0), font_size=15)
+
+# Right side: video screenshot placeholder
+add_pic_frame(slide, Inches(8.2), Inches(1.8), Inches(4.6), Inches(2.8),
+              "🎥 演示视频截图")
+add_pic_frame(slide, Inches(8.2), Inches(4.8), Inches(4.6), Inches(2.2),
+              "📊 统计页面截图")
 
 # =========================================
-# Slide 9: Future
+# Slide 9: 数据展示（新增！）
+# =========================================
+slide = prs.slides.add_slide(prs.slide_layouts[6])
+set_slide_bg(slide, DARK_BG)
+add_rect(slide, Inches(0.5), Inches(0.3), Inches(3.2), Inches(0.6), ORANGE)
+add_text_box(slide, Inches(0.7), Inches(0.35), Inches(3), Inches(0.5),
+             "数据展示", font_size=22, color=WHITE, bold=True)
+
+add_text_box(slide, Inches(0.8), Inches(1.2), Inches(11), Inches(0.6),
+             "📊 专注数据比你想象的更直观", font_size=24, color=ORANGE, bold=True)
+
+# Key metrics boxes
+metrics = [
+    (Inches(0.8), Inches(2.0), Inches(2.8), Inches(1.5), "今日专注", "00:32:15", "+15% 比昨天", GREEN),
+    (Inches(3.8), Inches(2.0), Inches(2.8), Inches(1.5), "走神次数", "12 次", "平均 2.7min/次", RED),
+    (Inches(6.8), Inches(2.0), Inches(2.8), Inches(1.5), "番茄完成", "3/5 个", "完成率 60%", ORANGE),
+    (Inches(9.8), Inches(2.0), Inches(2.8), Inches(1.5), "专注率", "68%", "本周最高 82%", BLUE),
+]
+for (l, t, w, h, label, value, sub, color) in metrics:
+    box = add_rect(slide, l, t, w, h, RGBColor(0x1E, 0x2A, 0x44))
+    add_text_box(slide, l + Inches(0.2), t + Inches(0.1), w - Inches(0.4), Inches(0.4),
+                 label, font_size=14, color=MUTED)
+    add_text_box(slide, l + Inches(0.2), t + Inches(0.45), w - Inches(0.4), Inches(0.5),
+                 value, font_size=28, color=color, bold=True)
+    add_text_box(slide, l + Inches(0.2), t + Inches(0.95), w - Inches(0.4), Inches(0.4),
+                 sub, font_size=11, color=MUTED)
+
+# Chart placeholder
+add_pic_frame(slide, Inches(0.8), Inches(3.8), Inches(5.8), Inches(3.2),
+              "📸 饼图：专注 vs 走神 vs 离开")
+add_pic_frame(slide, Inches(7.0), Inches(3.8), Inches(5.8), Inches(3.2),
+              "📸 柱状图：7天专注趋势")
+
+# =========================================
+# Slide 10: Future
 # =========================================
 slide = prs.slides.add_slide(prs.slide_layouts[6])
 set_slide_bg(slide, DARK_BG)
@@ -312,7 +419,7 @@ add_rect(slide, Inches(0.5), Inches(0.3), Inches(3.2), Inches(0.6), ORANGE)
 add_text_box(slide, Inches(0.7), Inches(0.35), Inches(3), Inches(0.5),
              "未来规划", font_size=22, color=WHITE, bold=True)
 
-add_text_box(slide, Inches(0.8), Inches(1.5), Inches(11), Inches(0.8),
+add_text_box(slide, Inches(0.8), Inches(1.2), Inches(11), Inches(0.7),
              "从个人工具到学习生态", font_size=28, color=ORANGE, bold=True)
 
 add_bullet_slide(slide, [
@@ -322,38 +429,53 @@ add_bullet_slide(slide, [
     "📱 移动端适配 — 手机+平板上线",
     "🔗 更丰富的硬件联动 — 震动提醒、光线提示",
     "",
+    "🌟 长期愿景：学会推荐引擎 — 根据专注数据推荐最佳学习时段",
+    "",
     "让 FocusBuddy 成为每个人桌面上的专注伙伴 🐱"
-], top=Inches(2.5))
+], top=Inches(1.9), width=Inches(7.0), font_size=15)
+
+# Right: future mockup placeholder
+add_pic_frame(slide, Inches(8.2), Inches(1.5), Inches(4.6), Inches(5.5),
+              "📸 未来多用户自习室\n概念设计图")
 
 # =========================================
-# Slide 10: Team + Thank You
+# Slide 11: Team + Thank You
 # =========================================
 slide = prs.slides.add_slide(prs.slide_layouts[6])
 set_slide_bg(slide, DARK_BG)
 add_rect(slide, Inches(0.5), Inches(6.8), Inches(12.3), Inches(0.04), ORANGE)
 
-add_text_box(slide, Inches(0.8), Inches(1.5), Inches(11), Inches(1),
+add_text_box(slide, Inches(0.8), Inches(1.2), Inches(11), Inches(0.8),
              "Dream Team", font_size=42, color=ORANGE, bold=True)
 
-add_text_box(slide, Inches(0.8), Inches(2.8), Inches(5), Inches(0.6),
+# Left: team info
+add_text_box(slide, Inches(0.8), Inches(2.4), Inches(5), Inches(0.6),
              "Ryan", font_size=28, color=LIGHT, bold=True)
-add_text_box(slide, Inches(0.8), Inches(3.4), Inches(5), Inches(0.5),
+add_text_box(slide, Inches(0.8), Inches(3.0), Inches(5), Inches(0.5),
              "前端开发 · Pomodoro · 统计 · 设置 · UI",
              font_size=16, color=MUTED)
 
-add_text_box(slide, Inches(0.8), Inches(4.2), Inches(5), Inches(0.6),
+add_text_box(slide, Inches(0.8), Inches(3.8), Inches(5), Inches(0.6),
              "Vickie", font_size=28, color=LIGHT, bold=True)
-add_text_box(slide, Inches(0.8), Inches(4.8), Inches(5), Inches(0.5),
+add_text_box(slide, Inches(0.8), Inches(4.4), Inches(5), Inches(0.5),
              "FaceMesh算法 · ESP32固件 · 主状态机 · 集成",
              font_size=16, color=MUTED)
 
-add_text_box(slide, Inches(0.8), Inches(5.8), Inches(11), Inches(0.5),
+# Right: project stats
+add_pic_frame(slide, Inches(7.0), Inches(2.0), Inches(5.8), Inches(4.2),
+              "📸 团队合影 / 项目合照")
+
+add_text_box(slide, Inches(0.8), Inches(5.4), Inches(11), Inches(0.5),
              "github.com/Sapnap67/FocusBuddy",
              font_size=14, color=MUTED)
 
-add_text_box(slide, Inches(0.8), Inches(6.2), Inches(11), Inches(0.5),
+add_text_box(slide, Inches(0.8), Inches(5.9), Inches(11), Inches(0.5),
              "🐱 感谢评委老师和 HHCC 2026！",
              font_size=20, color=ORANGE, bold=True)
+
+add_text_box(slide, Inches(0.8), Inches(6.3), Inches(11), Inches(0.4),
+             "Made with ❤️ by Dream Team · 2026",
+             font_size=12, color=MUTED)
 
 # Save
 output_path = r"C:\Users\HUAWEI\Desktop\openclaw\FocusBuddy_v3\docs\FocusBuddy_PPT.pptx"
