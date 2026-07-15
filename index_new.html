@@ -66,6 +66,11 @@ button:disabled{opacity:.4;cursor:default}
 .lvl-xp-bar{height:6px;background:#eee;border-radius:3px;overflow:hidden;margin:8px 0 4px}
 .lvl-xp-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:3px;transition:width .3s}
 .lvl-xp-txt{font-size:11px;color:var(--muted)}
+
+/* 番茄预设 */
+.preset-btn{padding:6px 10px;border:2px solid #e0e0e0;border-radius:6px;background:#fff;color:var(--text);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;width:auto;flex:none}
+.preset-btn:hover{border-color:var(--accent);color:var(--accent)}
+.preset-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
 </style>
 </head>
 <body>
@@ -99,16 +104,35 @@ button:disabled{opacity:.4;cursor:default}
       </div>
     </div>
 
-    <div class="card">
+    <div class="card" style="text-align:center">
       <h3>🍅 番茄计时</h3>
       <div class="timer-label" id="pomodoroLabel">准备就绪</div>
-      <div class="timer" id="pomodoroTimer">25:00</div>
-      <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:10px">
-        <button onclick="adjustPomodoro(-5)" style="width:32px;height:32px;padding:0;border-radius:50%;background:#f0f0f0;color:#333;font-size:18px;line-height:1;border:none;cursor:pointer;flex:none">−</button>
-        <span id="pomodoroSetting" style="font-size:12px;color:var(--muted);min-width:50px;text-align:center">25 min</span>
-        <button onclick="adjustPomodoro(+5)" style="width:32px;height:32px;padding:0;border-radius:50%;background:#f0f0f0;color:#333;font-size:18px;line-height:1;border:none;cursor:pointer;flex:none">+</button>
+      <div style="position:relative;display:inline-block;margin:0 auto">
+        <svg width="140" height="140" viewBox="0 0 140 140" style="transform:rotate(-90deg)">
+          <circle cx="70" cy="70" r="60" fill="none" stroke="#eee" stroke-width="8"/>
+          <circle id="pomoRing" cx="70" cy="70" r="60" fill="none" stroke="var(--accent)" stroke-width="8" stroke-linecap="round" stroke-dasharray="377" stroke-dashoffset="0" style="transition:stroke-dashoffset .5s"/>
+        </svg>
+        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center">
+          <div class="timer" id="pomodoroTimer" style="font-size:28px;margin:0">25:00</div>
+          <span id="pomodoroSetting" style="font-size:11px;color:var(--muted)">25 min</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:4px;justify-content:center;margin:10px 0">
+        <button onclick="setPomodoro(15)" class="preset-btn" data-v="15">15m</button>
+        <button onclick="setPomodoro(25)" class="preset-btn active" data-v="25">25m</button>
+        <button onclick="setPomodoro(45)" class="preset-btn" data-v="45">45m</button>
+        <button onclick="setPomodoro(60)" class="preset-btn" data-v="60">60m</button>
       </div>
       <button class="btn-start" id="mainBtn">▶ 开始专注</button>
+    </div>
+
+    <div class="card" id="dailyReport" style="text-align:center">
+      <h3>📊 今日战报</h3>
+      <div style="display:flex;justify-content:space-around;margin:8px 0">
+        <div><div style="font-size:28px;font-weight:700;color:var(--accent)" id="streakDays">0</div><div style="font-size:10px;color:var(--muted)">🔥 连续天数</div></div>
+        <div><div style="font-size:28px;font-weight:700;color:var(--good)" id="todayPomos">0</div><div style="font-size:10px;color:var(--muted)">🍅 完成番茄</div></div>
+        <div><div style="font-size:28px;font-weight:700;color:var(--accent2)" id="todayFocus">0m</div><div style="font-size:10px;color:var(--muted)">⏱ 专注时长</div></div>
+      </div>
     </div>
 
     <div class="lvl-card">
@@ -520,17 +544,37 @@ var mainBtn = document.getElementById('mainBtn');
 var pomodoroTimerEl = document.getElementById('pomodoroTimer');
 var pomodoroLabel = document.getElementById('pomodoroLabel');
 var pomodoroSettingEl = document.getElementById('pomodoroSetting');
+var pomoRing = document.getElementById('pomoRing');
+var RING_CIRC = Math.PI * 2 * 60; // ~377
 
-// 调整番茄钟时长
-window.adjustPomodoro = function(delta) {
-  if (pomodoroRunning) return; // 运行中不能调
-  var newMin = Math.round(POMODORO_SECS / 60) + delta;
-  if (newMin < 5) newMin = 5;    // 最少5分钟
-  if (newMin > 120) newMin = 120; // 最多2小时
-  POMODORO_SECS = newMin * 60;
+function updatePomoRing() {
+  if (!pomoRing) return;
+  var pct = pomodoroRemaining / POMODORO_SECS;
+  pomoRing.setAttribute('stroke-dashoffset', RING_CIRC * (1 - pct));
+  pomoRing.setAttribute('stroke', pct > 0.5 ? 'var(--accent)' : pct > 0.2 ? 'var(--warn)' : 'var(--bad)');
+}
+
+// 番茄预设
+window.setPomodoro = function(min) {
+  if (pomodoroRunning) return;
+  POMODORO_SECS = min * 60;
   pomodoroRemaining = POMODORO_SECS;
-  pomodoroSettingEl.textContent = newMin + ' min';
+  pomodoroSettingEl.textContent = min + ' min';
   updatePomodoroDisplay();
+  updatePomoRing();
+  // 高亮当前预设
+  document.querySelectorAll('.preset-btn').forEach(function(b) {
+    b.classList.toggle('active', parseInt(b.getAttribute('data-v')) === min);
+  });
+};
+
+// 调整番茄钟时长（兼容旧的+/-按钮，如果存在的话）
+window.adjustPomodoro = function(delta) {
+  if (pomodoroRunning) return;
+  var newMin = Math.round(POMODORO_SECS / 60) + delta;
+  if (newMin < 5) newMin = 5;
+  if (newMin > 120) newMin = 120;
+  window.setPomodoro(newMin);
 };
 
 // ESP32 pet sync state
@@ -585,6 +629,7 @@ function startPomodoro() {
 
   pomodoroInterval = setInterval(function() {
     pomodoroRemaining--;
+    updatePomoRing();
     var m = Math.floor(pomodoroRemaining / 60);
     var s = pomodoroRemaining % 60;
 
@@ -592,13 +637,17 @@ function startPomodoro() {
       // Timer complete
       pomodoroRemaining = 0;
       updatePomodoroDisplay();
+      updatePomoRing();
       beep();
       badge.textContent = '✅ 完成！';
       badge.className = 'badge good';
       pomodoroLabel.textContent = '✅ 完成！';
-      // Auto-reset to 25:00
+      // 记录一个番茄 + 专注时长
+      addCompletedPomo();
+      // Auto-reset
       pomodoroRemaining = POMODORO_SECS;
       updatePomodoroDisplay();
+      updatePomoRing();
       pomodoroLabel.textContent = '🍅 专注中';
       return;
     }
@@ -642,6 +691,42 @@ mainBtn.onclick = function() {
     mainBtn.className = 'btn-stop';
   }
 };
+
+// ══════════ 🔥 连续天数 + 今日战报 ═════════=
+
+(function() {
+  var KEY = '***';
+  var TODAY = new Date().toISOString().slice(0,10);
+
+  function load() {
+    try { var d = JSON.parse(localStorage.getItem(KEY)); return d || { lastDate:null, streak:0, todayPomos:0, todayMinutes:0, todayDate:null }; }
+    catch(e) { return { lastDate:null, streak:0, todayPomos:0, todayMinutes:0, todayDate:null }; }
+  }
+
+  function save(d) { try { localStorage.setItem(KEY, JSON.stringify(d)); } catch(e) {} }
+
+  function updateUI(d) {
+    var s=document.getElementById('streakDays'), p=document.getElementById('todayPomos'), f=document.getElementById('todayFocus');
+    if(s) s.textContent = d.streak || 0;
+    if(p) p.textContent = d.todayPomos || 0;
+    if(f) { var m = d.todayMinutes||0; f.textContent = m>=60 ? Math.floor(m/60)+'h'+(m%60?m%60+'m':'') : m+'m'; }
+  }
+
+  var data = load();
+  var yesterday = new Date(Date.now()-86400000).toISOString().slice(0,10);
+  if (data.todayDate !== TODAY) {
+    if (data.lastDate===yesterday || data.todayDate===yesterday) { data.streak=(data.streak||0)+1; }
+    else if (data.lastDate!==TODAY) { data.streak=1; }
+    data.lastDate=TODAY; data.todayDate=TODAY; data.todayPomos=0; data.todayMinutes=0;
+    save(data);
+  }
+  updateUI(data);
+
+  window.addCompletedPomo = function() {
+    var d=load(); d.todayPomos=(d.todayPomos||0)+1; d.todayMinutes=(d.todayMinutes||0)+Math.round(POMODORO_SECS/60);
+    d.lastDate=TODAY; d.todayDate=TODAY; save(d); updateUI(d);
+  };
+})();
 
 // ══════════ 📋 今日计划 ══════════
 
