@@ -118,7 +118,7 @@ button:disabled{opacity:.4;cursor:default}
       <h3>📋 今日计划</h3>
       <div class="plan-input-row">
         <textarea id="planInput" rows="3" placeholder="写今天要做的事，每行一条&#10;例如：&#10;写论文 2小时&#10;整理数据 30分钟&#10;做PPT"></textarea>
-        <button id="planGenerateBtn" class="btn-sm">生成计划</button>
+        <button id="planGenerateBtn" class="btn-sm" type="button" onclick="window.genPlan()">生成计划</button>
       </div>
       <div id="planList" class="plan-list"></div>
       <div id="planSummary" class="plan-summary hidden">
@@ -724,24 +724,22 @@ mainBtn.onclick = function() {
     } catch(e) { return null; }
   }
 
-  // 生成按钮
-  planBtn.onclick = function() {
+  // 暴露到全局，保证 inline onclick 能找到
+  window.genPlan = function() {
     var text = planInput.value.trim();
-    console.log('[FocusBuddy] 生成计划触发, 输入长度:', text.length);
-    if (!text) {
-      console.log('[FocusBuddy] 输入为空，跳过');
-      return;
-    }
+    if (!text) return;
     try {
       var tasks = parsePlan(text);
-      console.log('[FocusBuddy] 解析出', tasks.length, '条任务');
       if (tasks.length === 0) return;
       saveTasks(tasks);
       renderTasks(tasks);
     } catch(e) {
-      console.error('[FocusBuddy] 生成计划出错:', e);
+      alert('生成计划出错: ' + e.message);
     }
   };
+
+  // 备用：如果 inline onclick 没触发（比如 JS 禁用了），这里兜底
+  planBtn.onclick = function() { window.genPlan(); };
 
   // Ctrl+Enter 快捷键
   planInput.onkeydown = function(e) {
