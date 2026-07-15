@@ -103,6 +103,11 @@ button:disabled{opacity:.4;cursor:default}
       <h3>🍅 番茄计时</h3>
       <div class="timer-label" id="pomodoroLabel">准备就绪</div>
       <div class="timer" id="pomodoroTimer">25:00</div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:10px">
+        <button onclick="adjustPomodoro(-5)" style="width:32px;height:32px;padding:0;border-radius:50%;background:#f0f0f0;color:#333;font-size:18px;line-height:1;border:none;cursor:pointer;flex:none">−</button>
+        <span id="pomodoroSetting" style="font-size:12px;color:var(--muted);min-width:50px;text-align:center">25 min</span>
+        <button onclick="adjustPomodoro(+5)" style="width:32px;height:32px;padding:0;border-radius:50%;background:#f0f0f0;color:#333;font-size:18px;line-height:1;border:none;cursor:pointer;flex:none">+</button>
+      </div>
       <button class="btn-start" id="mainBtn">▶ 开始专注</button>
     </div>
 
@@ -514,6 +519,19 @@ var pomodoroRunning = false;
 var mainBtn = document.getElementById('mainBtn');
 var pomodoroTimerEl = document.getElementById('pomodoroTimer');
 var pomodoroLabel = document.getElementById('pomodoroLabel');
+var pomodoroSettingEl = document.getElementById('pomodoroSetting');
+
+// 调整番茄钟时长
+window.adjustPomodoro = function(delta) {
+  if (pomodoroRunning) return; // 运行中不能调
+  var newMin = Math.round(POMODORO_SECS / 60) + delta;
+  if (newMin < 5) newMin = 5;    // 最少5分钟
+  if (newMin > 120) newMin = 120; // 最多2小时
+  POMODORO_SECS = newMin * 60;
+  pomodoroRemaining = POMODORO_SECS;
+  pomodoroSettingEl.textContent = newMin + ' min';
+  updatePomodoroDisplay();
+};
 
 // ESP32 pet sync state
 var lastPetState = '';
