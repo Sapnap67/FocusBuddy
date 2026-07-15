@@ -46,6 +46,8 @@ button:disabled{opacity:.4;cursor:default}
 .plan-task .task-name{flex:1}
 .plan-task .task-time{color:var(--muted);font-size:11px;white-space:nowrap}
 .plan-task.done .task-name{text-decoration:line-through;color:var(--muted)}
+.plan-task .del-btn{width:20px;height:20px;padding:0;border:none;border-radius:50%;background:transparent;color:#ccc;font-size:16px;line-height:1;cursor:pointer;flex:none;transition:all .15s}
+.plan-task .del-btn:hover{background:#fee;color:var(--bad)}
 .plan-summary{text-align:center;font-size:12px;color:var(--muted);margin-top:8px;padding-top:8px;border-top:1px solid rgba(0,0,0,0.04)}
 .hidden{display:none}
 
@@ -779,7 +781,7 @@ mainBtn.onclick = function() {
 
   function renderTasks(tasks) {
     planList.innerHTML = '';
-    tasks.forEach(function(task) {
+    tasks.forEach(function(task, idx) {
       var div = document.createElement('div');
       div.className = 'plan-task' + (task.done ? ' done' : '');
       var cb = document.createElement('input');
@@ -797,9 +799,19 @@ mainBtn.onclick = function() {
       var timeSpan = document.createElement('span');
       timeSpan.className = 'task-time';
       timeSpan.textContent = task.minutes + 'min';
+      var delBtn = document.createElement('button');
+      delBtn.className = 'del-btn';
+      delBtn.textContent = '×';
+      delBtn.title = '删除';
+      delBtn.onclick = function() {
+        tasks.splice(idx, 1);
+        saveTasks(tasks);
+        renderTasks(tasks);
+      };
       div.appendChild(cb);
       div.appendChild(nameSpan);
       div.appendChild(timeSpan);
+      div.appendChild(delBtn);
       planList.appendChild(div);
     });
     updateSummary(tasks);
