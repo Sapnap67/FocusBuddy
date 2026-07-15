@@ -246,7 +246,7 @@ var sessionStart = null;
 // 语音提醒
 var alertAudio = document.getElementById('alertAudio');
 var lastVoiceAlert = 0;
-var VOICE_COOLDOWN = 15000; // 15秒内不重复播放
+var VOICE_COOLDOWN = 5000; // 5秒冷却
 
 function playVoiceAlert(reason) {
   if (!alertAudio || !alertAudio.src) return;
@@ -421,6 +421,7 @@ function handleDistraction(distracted, reason) {
     distractStartTime = null;
     if (isDistracted) {
       isDistracted = false;
+      lastVoiceAlert = 0; // 人脸回来→重置冷却，下次离开立即播放
       warnBanner.style.display = 'none';
     }
     badge.textContent = '✓ 专注中';
