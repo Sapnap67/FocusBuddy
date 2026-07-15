@@ -636,63 +636,81 @@ mainBtn.onclick = function() {
   var planSummary = document.getElementById('planSummary');
   var planDone = document.getElementById('planDone');
   var planTotal = document.getElementById('planTotal');
+
+  // 如果 DOM 没加载完就不执行
+  if (!planInput || !planBtn || !planList) {
+    console.warn('[FocusBuddy] 今日计划 DOM 元素缺失，跳过初始化');
+    return;
+  }
+
   var PLAN_KEY = 'focusbuddy_plan_' + new Date().toISOString().slice(0,10);
 
-  // 解析时间字符串 → 分钟数
+  // 解析时间 → 分钟数
   function parseDuration(text) {
-    var match = text.match(/(\d+)\s*(小时|h|hour|hr)/i);
-    if (match) return parseInt(match[1]) * 60;
-    match = text.match(/(\d+)\s*(分钟|min|m)(?!s)/i);
-    if (match) return parseInt(match[1]);
-    return 25; // 默认一个番茄钟
+    var m = text.match(/(\d+)\s*(小时|h|hour|hrs?)/i);
+    if (m) return parseInt(m[1]) * 60;
+    m = text.match(/(\d+)\s*(分钟|min|mins?)/i);
+    if (m) return parseInt(m[1]);
+    return 25;
+  }
+
+  function cleanName(line) {
+    return line
+      .replace(/^\d+[\.\\)、，,\s]+/, '')   // 行号前缀
+      .replace(/\d+\s*(?:小时|h|hour|hrs?|分钟|min|mins?)\s*/gi, '')  // 时间描述
+      .replace(/\d+\s*[hHmM]\b/g, '')        // 英文缩写
+      .replace(/^[-\\)\.\s、，,，]+/, '')      // 首部符号
+      .replace(/[-\s、，,，]+$/, '')            // 尾部符号
+      .trim();
   }
 
   function parsePlan(text) {
-    var lines = text.split('\n').filter(function(l) { return l.trim(); });
-    return lines.map(function(line) {
-      line = line.trim();
-      // 移除行号前缀
-      line = line.replace(/^\d+[\.\\)\s]+/, '');
-      var minutes = parseDuration(line);
-      // 从文本中移除时间描述，只留任务名
-      var name = line.replace(/\d+\s*(小时|h|hour|hr|分钟|min|m)\s*/gi, '').trim();
-      // 去掉首尾的 '-'、'、'等符号
-      name = name.replace(/^[-\\)\.\s、，,，]+/, '').replace(/[-\s、，,，]+$/, '');
-      if (!name) name = line.replace(/\d+\s*(小时|h|hour|hr|分钟|min|m)\s*/gi, '').trim();
-      return { name: name || '任务', minutes: minutes, done: false };
-    });
+    return text.split(/\r?\n/)
+      .map(function(l) { return l.trim(); })
+      .filter(function(l) { return l; })
+      .map(function(line) {
+        var minutes = parseDuration(line);
+        var name = cleanName(line);
+        if (!name) name = line.replace(/\d+.*/g, '').trim() || '任务';
+        return { name: name, minutes: minutes, done: false };
+      });
   }
 
   function renderTasks(tasks) {
     planList.innerHTML = '';
-    var doneCount = 0;
-    tasks.forEach(function(task, i) {
-      if (task.done) doneCount++;
+    tasks.forEach(function(task) {
       var div = document.createElement('div');
       div.className = 'plan-task' + (task.done ? ' done' : '');
-      div.innerHTML = '<input type="checkbox"' + (task.done ? ' checked' : '') + '>'
-        + '<span class="task-name">' + escapeHtml(task.name) + '</span>'
-        + '<span class="task-time">' + task.minutes + 'min</span>';
-      div.querySelector('input').addEventListener('change', function(e) {
-        task.done = e.target.checked;
+      var cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = !!task.done;
+      cb.onchange = function() {
+        task.done = cb.checked;
         div.classList.toggle('done', task.done);
         saveTasks(tasks);
         updateSummary(tasks);
-      });
+      };
+      var nameSpan = document.createElement('span');
+      nameSpan.className = 'task-name';
+      nameSpan.textContent = task.name;
+      var timeSpan = document.createElement('span');
+      timeSpan.className = 'task-time';
+      timeSpan.textContent = task.minutes + 'min';
+      div.appendChild(cb);
+      div.appendChild(nameSpan);
+      div.appendChild(timeSpan);
       planList.appendChild(div);
     });
     updateSummary(tasks);
-  }
-
-  function escapeHtml(str) {
-    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 
   function updateSummary(tasks) {
     var done = tasks.filter(function(t) { return t.done; }).length;
     planDone.textContent = done;
     planTotal.textContent = tasks.length;
-    planSummary.classList.remove('hidden');
+    if (tasks.length > 0) {
+      planSummary.classList.remove('hidden');
+    }
   }
 
   function saveTasks(tasks) {
@@ -706,28 +724,46 @@ mainBtn.onclick = function() {
     } catch(e) { return null; }
   }
 
-  planBtn.addEventListener('click', function() {
+  // 生成按钮
+  planBtn.onclick = function() {
     var text = planInput.value.trim();
-    if (!text) return;
-    var tasks = parsePlan(text);
-    if (tasks.length === 0) return;
-    saveTasks(tasks);
-    renderTasks(tasks);
-  });
-
-  // 按回车也生成
-  planInput.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter' && e.ctrlKey) {
-      planBtn.click();
+    console.log('[FocusBuddy] 生成计划触发, 输入长度:', text.length);
+    if (!text) {
+      console.log('[FocusBuddy] 输入为空，跳过');
+      return;
     }
-  });
+    try {
+      var tasks = parsePlan(text);
+      console.log('[FocusBuddy] 解析出', tasks.length, '条任务');
+      if (tasks.length === 0) return;
+      saveTasks(tasks);
+      renderTasks(tasks);
+    } catch(e) {
+      console.error('[FocusBuddy] 生成计划出错:', e);
+    }
+  };
 
-  // 页面加载时恢复今日已有计划
-  var saved = loadTasks();
-  if (saved && saved.length > 0) {
-    planInput.value = saved.map(function(t) { return t.name + ' ' + t.minutes + '分钟'; }).join('\n');
-    renderTasks(saved);
-  }
+  // Ctrl+Enter 快捷键
+  planInput.onkeydown = function(e) {
+    if (e.key === 'Enter' && e.ctrlKey) {
+      e.preventDefault();
+      planBtn.onclick();
+    }
+  };
+
+  // 恢复今日已有计划
+  try {
+    var saved = loadTasks();
+    if (saved && saved.length > 0) {
+      planInput.value = saved.map(function(t) {
+        var timeStr = t.minutes >= 60
+          ? Math.floor(t.minutes / 60) + '小时' + (t.minutes % 60 ? t.minutes % 60 + '分钟' : '')
+          : t.minutes + '分钟';
+        return t.name + ' ' + timeStr;
+      }).join('\n');
+      renderTasks(saved);
+    }
+  } catch(e) { console.error('[FocusBuddy] 恢复计划失败:', e); }
 })();
 
 // ══════════ 📈 专注等级系统 ══════════
