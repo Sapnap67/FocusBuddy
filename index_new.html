@@ -169,6 +169,7 @@ button:disabled{opacity:.4;cursor:default}
   <span id="timerLabel">—</span>
   <button id="startBtn"></button>
   <button id="stopBtn"></button>
+  <audio id="alertAudio" preload="auto"></audio>
 </div>
 
 <script>
@@ -241,6 +242,24 @@ var isDistracted = false;
 var distractCount = 0;
 var focusScore = 100;
 var sessionStart = null;
+
+// 语音提醒
+var alertAudio = document.getElementById('alertAudio');
+var lastVoiceAlert = 0;
+var VOICE_COOLDOWN = 15000; // 15秒内不重复播放
+
+function playVoiceAlert(reason) {
+  if (!alertAudio || !alertAudio.src) return;
+  var now = Date.now();
+  if (now - lastVoiceAlert < VOICE_COOLDOWN) return;
+  lastVoiceAlert = now;
+  try { alertAudio.play().catch(function(){}) } catch(e) {}
+}
+
+// 设置语音文件路径（Vickie用这个加载自定义语音）
+window.setAlertVoice = function(filePath) {
+  if (alertAudio) { alertAudio.src = filePath; alertAudio.load(); }
+};
 
 // 画面尺寸（修正宽高比失真 — 旧项目坑2）
 var frameW = 640, frameH = 480;
@@ -382,6 +401,7 @@ function handleDistraction(distracted, reason) {
     if (elapsed >= threshold && !isDistracted) {
       isDistracted = true;
       distractCount++;
+      playVoiceAlert(reason);
       showWarn('⚠ ' + reason + '！请集中注意力');
     }
 
